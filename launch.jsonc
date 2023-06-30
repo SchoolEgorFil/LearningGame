@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'v0_2023_coursework'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=v0_2023_coursework",
+                    "--package=v0_2023_coursework"
+                ],
+                "filter": {
+                    "name": "v0_2023_coursework",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'v0_2023_coursework'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=v0_2023_coursework",
+                    "--package=v0_2023_coursework"
+                ],
+                "filter": {
+                    "name": "v0_2023_coursework",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
