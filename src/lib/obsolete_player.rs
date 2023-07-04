@@ -16,11 +16,11 @@ use bevy_rapier3d::prelude::{
     KinematicCharacterControllerOutput, LockedAxes, RigidBody, Sleeping,
 };
 
-use super::{scene_loader::Inserted, markers::PlayerParentMarker};
+use super::markers::{ExploredGLTFObjectMarker, PlayerParentMarker};
 
 pub fn gltf_load_player(
     mut commands: Commands,
-    gltf_obj: Query<(Entity, &Name, &Transform), Without<Inserted>>,
+    gltf_obj: Query<(Entity, &Name, &Transform), Without<ExploredGLTFObjectMarker>>,
     player_query: Query<(Entity, &PlayerParentMarker)>,
     asset_server: Res<AssetServer>,
 ) {
@@ -33,9 +33,11 @@ pub fn gltf_load_player(
                 continue;
             };
             println!("PLAYER LOADING");
-            commands.entity(player.0)
-                .insert(TransformBundle::from_transform(Transform::from_translation(m.2.clone().translation),
-            ));
+            commands
+                .entity(player.0)
+                .insert(TransformBundle::from_transform(
+                    Transform::from_translation(m.2.clone().translation),
+                ));
 
             commands.entity(m.0).despawn();
         }
@@ -44,8 +46,11 @@ pub fn gltf_load_player(
 
 pub fn gltf_load_colliders(
     mut commands: Commands,
-    gltf_mesh_query: Query<(Entity, &Parent, &Handle<Mesh>)>,
-    gltf_object_query: Query<(Entity, &Name, Option<&Parent>), Without<Inserted>>,
+    gltf_mesh_query: Query<(Entity, &Parent, &Handle<Mesh>), Without<ExploredGLTFObjectMarker>>,
+    gltf_object_query: Query<
+        (Entity, &Name, Option<&Parent>, Option<&Transform>),
+        Without<ExploredGLTFObjectMarker>,
+    >,
     mesh_assets: Res<Assets<Mesh>>,
 ) {
     for mesh in gltf_mesh_query.iter() {
@@ -57,41 +62,53 @@ pub fn gltf_load_colliders(
             continue;
         };
 
-        let collider = match object.1.as_str() { 
-            x if x.contains(TAGS::GENERIC_COLLIDER)  => {
-                let compute_shape = if x.contains(TAGS::MODIFIER_CONVEX_COLLIDER) {
-                    bevy_rapier3d::prelude::ComputedColliderShape::ConvexDecomposition(bevy_rapier3d::prelude::VHACDParameters::default())
+        let collider = match object.1.as_str() {
+            x if x.contains(TAGS::GENERIC_COLLIDER) => {
+                let compute_shape = if object.1.as_str().contains(TAGS::MODIFIER_CONVEX_COLLIDER) {
+                    bevy_rapier3d::prelude::ComputedColliderShape::ConvexDecomposition(
+                        bevy_rapier3d::prelude::VHACDParameters::default(),
+                    )
                 } else {
                     bevy_rapier3d::prelude::ComputedColliderShape::TriMesh
                 };
                 Collider::from_bevy_mesh(mesh_data, &compute_shape).unwrap()
             }
-            _ => {continue;}
+            x if x.contains(TAGS::SPHERE_COLLIDER) => {
+                let Some(transform) = object.3 else { panic!() };
+
+                Collider::ball(transform.scale.x)
+            }
+            _ => {
+                continue;
+            }
         };
 
-        let rb = if object.1.as_str().contains(TAGS::MODIFIER_RIGIDBODY) { RigidBody::Dynamic } else { RigidBody::Fixed };
+        let rb = if object.1.as_str().contains(TAGS::MODIFIER_RIGIDBODY) {
+            RigidBody::Dynamic
+        } else {
+            RigidBody::Fixed
+        };
 
         let bundle = (
             rb,
             collider,
             ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_STATIC,
-            Ccd::enabled()
+            Ccd::enabled(),
         );
 
         match object.2 {
-            Some(parent_id) => {
-                commands.entity(parent_id.get())
-                    .insert(bundle);
+            Some(parent_id) if object.1.as_str().contains(TAGS::MODIFIER_PARENT) => {
+                commands.entity(parent_id.get()).insert(bundle);
                 commands.entity(mesh.0).despawn();
-            },
-            None => {
-                commands.entity(object.0)
-                    .insert(bundle);
+            }
+            _ => {
+                commands.entity(object.0).insert(bundle);
+                commands.entity(mesh.0).insert(ExploredGLTFObjectMarker);
+                // commands.entity(mesh.0).despawn();
             }
         }
     }
 }
-
 
 pub mod TAGS {
     pub const PLAYER_SPAWN: &'static str = "PLAYER_SPAWNPOINT";

@@ -1,17 +1,18 @@
 use std::time::{Duration, Instant};
 
 use bevy::{
+    input::mouse::MouseMotion,
     prelude::{
-        AssetServer, BuildChildren, Bundle, Camera, Camera3dBundle, Commands, Component,
-        EnvironmentMapLight, Input, KeyCode, Query, Res, ResMut, SpatialBundle, Vec3, With, GlobalTransform, Assets, Mesh, PbrBundle, shape::Plane, Color, StandardMaterial, Transform, EventReader, Entity,
-    }, input::mouse::MouseMotion, window::{CursorGrabMode, Window},
-    
+        shape::Plane, AssetServer, Assets, BuildChildren, Bundle, Camera, Camera3dBundle, Color,
+        Commands, Component, Entity, EnvironmentMapLight, EventReader, GlobalTransform, Input,
+        KeyCode, Mesh, PbrBundle, Query, Res, ResMut, SpatialBundle, StandardMaterial, Transform,
+        Vec3, With,
+    },
+    window::{CursorGrabMode, Window},
 };
-use bevy_rapier3d::{
-    prelude::{
-        ActiveCollisionTypes, Ccd, Collider, Damping, ExternalImpulse,
-        KinematicCharacterController, LockedAxes, RapierContext, RigidBody, QueryFilter, Velocity,
-    }
+use bevy_rapier3d::prelude::{
+    ActiveCollisionTypes, Ccd, Collider, Damping, ExternalImpulse, KinematicCharacterController,
+    LockedAxes, QueryFilter, RapierContext, RigidBody, Velocity,
 };
 
 use super::markers::{PlayerCameraChildMarker, PlayerParentMarker};
@@ -56,7 +57,7 @@ pub struct JumpableCharacter {
     // for those who wish to jump
     // acceleration: f32,
     pub jump_buffer: Option<Instant>, // if you don't want to jump, its value is None, but if you do, set it to Time of creation
-                                  // impulse: ExternalImpulse,
+                                      // impulse: ExternalImpulse,
 }
 
 impl JumpableCharacter {
@@ -84,7 +85,7 @@ pub struct PlayerParentBundle {
     pub ccd: Ccd,
     pub damping: Damping,
     pub collider: Collider,
-    pub velocity: Velocity
+    pub velocity: Velocity,
 }
 
 #[derive(Bundle)]
@@ -129,8 +130,8 @@ pub fn add_player(mut commands: Commands, mut asset_server: ResMut<AssetServer>)
                 linear_damping: 0.0,
                 angular_damping: 0.0,
             },
-            collider: Collider::cylinder(0.8, 0.4),
-            velocity: Velocity::zero()
+            collider: Collider::capsule_y(0.8 - 0.4, 0.4),
+            velocity: Velocity::zero(),
         })
         .with_children(|parent| {
             parent.spawn(PlayerCameraChildBundle {
@@ -145,6 +146,10 @@ pub fn add_player(mut commands: Commands, mut asset_server: ResMut<AssetServer>)
                             ..Default::default()
                         },
                     ),
+                    transform: Transform {
+                        translation: Vec3::Y * 0.8,
+                        ..Default::default()
+                    },
                     camera_3d: bevy::prelude::Camera3d::default(),
                     ..Default::default()
                 },
@@ -179,7 +184,7 @@ pub fn tackle_jump(
         &KinematicCharacterController,
         &GlobalTransform,
         &mut Velocity,
-        Entity
+        Entity,
     )>,
     rapier_context: Res<RapierContext>,
 ) {
@@ -189,7 +194,7 @@ pub fn tackle_jump(
             continue;
         };
         let delta = Instant::now().duration_since(buf);
-        
+
         let Some((_entity,toi)) = rapier_context.cast_ray(
             jumpable_object.3.translation(), Vec3::NEG_Y, 1.6, false, QueryFilter::new().exclude_collider(jumpable_object.5)) else {
             continue;
@@ -197,12 +202,11 @@ pub fn tackle_jump(
 
         println!("toi: {}, buf: {:?}", toi, buf);
 
-
         // TODO un-hardocde buffer
 
         if delta.as_millis() < 300 && toi < 1.0 {
             jumpable_object.4.linvel.y = 0.0;
-            jumpable_object.0.impulse += Vec3::new(0.0,5.0,0.0);
+            jumpable_object.0.impulse += Vec3::new(0.0, 5.0, 0.0);
             println!("done"); // TODO LOSE SPEED
             jumpable_object.1.jump_buffer = None;
         } else if delta.as_millis() >= 300 {
@@ -255,21 +259,19 @@ pub fn move_player(
     c.impulse += Vec3::new(0.4, 0.0, 0.4) * v;
 }
 
-
 pub fn spawn_debug_plane(
     mut commands: Commands,
     mut asset_server: ResMut<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Plane::from_size(15.0).into()),
-        material: materials.add(Color::rgb(0.3,0.4,0.8).into()),
-        ..Default::default()
-    })
-    .insert(
-        Collider::halfspace(Vec3::Y).unwrap()
-    );
+    commands
+        .spawn(PbrBundle {
+            mesh: meshes.add(Plane::from_size(15.0).into()),
+            material: materials.add(Color::rgb(0.3, 0.4, 0.8).into()),
+            ..Default::default()
+        })
+        .insert(Collider::halfspace(Vec3::Y).unwrap());
 }
 
 pub fn prepare_cursor(

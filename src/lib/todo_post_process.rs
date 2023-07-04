@@ -16,10 +16,9 @@ use bevy::{
         texture::BevyDefault,
         view::RenderLayers,
     },
-    sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle, Mesh2dHandle}, window::WindowResized,
+    sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle, Mesh2dHandle},
+    window::WindowResized,
 };
-
-
 
 #[derive(Component)]
 pub struct PostProcessQuadMarker;
@@ -91,38 +90,37 @@ pub fn setup(
         UiCameraConfig { show_ui: false },
         // RenderLayers::layer(1),
         RenderLayers::layer(2),
-        CapturingCameraMarker
+        CapturingCameraMarker,
     ));
 
-    
     // This specifies the layer used for the post processing camera, which will be attached to the post processing camera and 2d quad.
-        
+
     {
         let quad_handle = meshes_asset.add(Mesh::from(shape::Quad::new(Vec2::new(
             size.width as f32,
             size.height as f32,
         ))));
-        
+
         // This material has the texture that has been rendered.
         let material_handle = first_pass_material_asset.add(FirstPassMaterial {
             source_image: image_handle.clone(),
         });
-        
+
         // Post processing 2d quad, with material using the render texture done by the main camera, with a custom shader.
         commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: quad_handle.into(),
-            material: material_handle,
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, 1.5),
+            MaterialMesh2dBundle {
+                mesh: quad_handle.into(),
+                material: material_handle,
+                transform: Transform {
+                    translation: Vec3::new(0.0, 0.0, 1.5),
+                    ..default()
+                },
                 ..default()
             },
-            ..default()
-        },
-        RenderLayers::layer(3),
-        PostProcessQuadMarker
+            RenderLayers::layer(3),
+            PostProcessQuadMarker,
         ));
-        
+
         // The post-processing pass camera.
         commands.spawn((
             Camera2dBundle {
@@ -135,14 +133,13 @@ pub fn setup(
                 ..Camera2dBundle::default()
             },
             RenderLayers::layer(3),
-            PostProcessCameraMarker
+            PostProcessCameraMarker,
         ));
     }
 
     const LEN: u8 = 5;
-    
-    for i in 1..=LEN {
 
+    for i in 1..=LEN {
         let second_quad_handle = meshes_asset.add(Mesh::from(shape::Quad::new(Vec2::new(
             size.width as f32,
             size.height as f32,
@@ -151,7 +148,7 @@ pub fn setup(
         // This material has the texture that has been rendered.
         let second_material_handle = second_pass_material_asset.add(SecondPassMaterial {
             source_image: image_handle.clone(),
-            intensity: (16>>i) as f32      
+            intensity: (16 >> i) as f32,
         });
 
         // Post processing 2d quad, with material using the render texture done by the main camera, with a custom shader.
@@ -165,8 +162,8 @@ pub fn setup(
                 },
                 ..default()
             },
-            RenderLayers::layer(3+i),
-            PostProcessQuadMarker
+            RenderLayers::layer(3 + i),
+            PostProcessQuadMarker,
         ));
 
         // The post-processing pass camera.
@@ -175,13 +172,13 @@ pub fn setup(
                 camera: Camera {
                     // renders after the first main camera which has default value: 0.
                     target: RenderTarget::Image(image_handle.clone()),
-                    order: 1+i as isize,
+                    order: 1 + i as isize,
                     ..default()
                 },
                 ..Camera2dBundle::default()
             },
-            RenderLayers::layer(3+i),
-            PostProcessCameraMarker
+            RenderLayers::layer(3 + i),
+            PostProcessCameraMarker,
         ));
     }
 
@@ -190,13 +187,13 @@ pub fn setup(
             size.width as f32,
             size.height as f32,
         ))));
-        
+
         // This material has the texture that has been rendered.
         let material_handle = third_pass_material_asset.add(ThirdPassMaterial {
             source_image: image_handle.clone(),
-            redius: 6.0
+            redius: 6.0,
         });
-        
+
         // Post processing 2d quad, with material using the render texture done by the main camera, with a custom shader.
         commands.spawn((
             MaterialMesh2dBundle {
@@ -208,41 +205,53 @@ pub fn setup(
                 },
                 ..default()
             },
-            RenderLayers::layer(3+LEN+1),
-            PostProcessQuadMarker
+            RenderLayers::layer(3 + LEN + 1),
+            PostProcessQuadMarker,
         ));
-        
+
         // The post-processing pass camera.
         commands.spawn((
             Camera2dBundle {
                 camera: Camera {
                     // renders after the first main camera which has default value: 0.
-                    order: 2+LEN as isize,
+                    order: 2 + LEN as isize,
                     ..default()
                 },
                 ..Camera2dBundle::default()
             },
-            RenderLayers::layer(3+LEN+1),
-            PostProcessCameraMarker
+            RenderLayers::layer(3 + LEN + 1),
+            PostProcessCameraMarker,
         ));
     }
 }
 
-
 pub fn resize(
     mut commands: Commands,
-    mut main_camera: Query<(Entity,&mut Camera), (With<Camera3d>,With<CapturingCameraMarker>,Without<PostProcessCameraMarker>)>,
-    mut post_process_camera: Query<(Entity,&mut Camera), (With<PostProcessCameraMarker>,Without<CapturingCameraMarker>)>,
-    windows: Query<&Window>, 
-    resized_window: Res<Events<WindowResized>>, 
-    mut images: ResMut<Assets<Image>>, 
-    mut meshes: ResMut<Assets<Mesh>>, 
+    mut main_camera: Query<
+        (Entity, &mut Camera),
+        (
+            With<Camera3d>,
+            With<CapturingCameraMarker>,
+            Without<PostProcessCameraMarker>,
+        ),
+    >,
+    mut post_process_camera: Query<
+        (Entity, &mut Camera),
+        (
+            With<PostProcessCameraMarker>,
+            Without<CapturingCameraMarker>,
+        ),
+    >,
+    windows: Query<&Window>,
+    resized_window: Res<Events<WindowResized>>,
+    mut images: ResMut<Assets<Image>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     mut q_mesh: Query<(&mut Mesh2dHandle, &Handle<FirstPassMaterial>), With<PostProcessQuadMarker>>,
     mut post_processing_materials: ResMut<Assets<FirstPassMaterial>>,
 ) {
     let mut reader = resized_window.get_reader();
     let mut camera = main_camera.single_mut();
-    
+
     for window in reader.iter(&resized_window) {
         let RenderTarget::Image(handle) = &camera.1.target else {
             return;
@@ -258,35 +267,40 @@ pub fn resize(
         let new_height = w.physical_height();
         let new_width = w.physical_width();
 
-        if new_height==0 || new_width==0 {
+        if new_height == 0 || new_width == 0 {
             return;
         }
 
-        let size = Extent3d { 
-            width: new_width, 
-            height: new_height, 
-            ..Default::default() 
+        let size = Extent3d {
+            width: new_width,
+            height: new_height,
+            ..Default::default()
         };
 
-        let hande = images.set(handle, Image {
-            texture_descriptor: TextureDescriptor {
-                label: None,
-                size,
-                dimension: TextureDimension::D2,
-                format: TextureFormat::bevy_default(),
-                mip_level_count: 1,
-                sample_count: 1,
-                usage: TextureUsages::TEXTURE_BINDING
-                    | TextureUsages::COPY_DST
-                    | TextureUsages::RENDER_ATTACHMENT,
-                view_formats: &[],
+        let hande = images.set(
+            handle,
+            Image {
+                texture_descriptor: TextureDescriptor {
+                    label: None,
+                    size,
+                    dimension: TextureDimension::D2,
+                    format: TextureFormat::bevy_default(),
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    usage: TextureUsages::TEXTURE_BINDING
+                        | TextureUsages::COPY_DST
+                        | TextureUsages::RENDER_ATTACHMENT,
+                    view_formats: &[],
+                },
+                ..default()
             },
-            ..default()
-        });
+        );
         images.get_mut(&hande).unwrap().resize(size);
 
         camera.1.target = RenderTarget::Image(hande.clone());
-        post_process_camera.for_each_mut(|mut p| {p.1.target = RenderTarget::Image(hande.clone());});
+        post_process_camera.for_each_mut(|mut p| {
+            p.1.target = RenderTarget::Image(hande.clone());
+        });
 
         q_mesh.for_each_mut(|p| {
             let Some(mesh) = meshes.get_mut(&p.0.0) else {
@@ -298,26 +312,25 @@ pub fn resize(
 
             texture.source_image = hande.clone();
 
-            meshes.set(&p.0.0, Mesh::from(shape::Quad::new(Vec2::new(
-                size.width as f32,
-                size.height as f32,
-            ))));
+            meshes.set(
+                &p.0 .0,
+                Mesh::from(shape::Quad::new(Vec2::new(
+                    size.width as f32,
+                    size.height as f32,
+                ))),
+            );
         })
-
     }
-
 }
 
 pub fn keyboard_input(
     keys: Res<Input<KeyCode>>,
-    mut q_cam: Query<&mut Transform, With<CapturingCameraMarker>>
-
+    mut q_cam: Query<&mut Transform, With<CapturingCameraMarker>>,
 ) {
     if keys.pressed(KeyCode::H) {
         q_cam.single_mut().translation.z += 0.1;
     }
 }
-
 
 // Region below declares of the custom material handling post processing effect
 
@@ -331,11 +344,10 @@ pub struct FirstPassMaterial {
     source_image: Handle<Image>,
 }
 
-impl Material2d for FirstPassMaterial { 
+impl Material2d for FirstPassMaterial {
     fn fragment_shader() -> ShaderRef {
         "shaders/post_process_prepare_outline.wgsl".into()
     }
-    
 }
 
 #[derive(AsBindGroup, TypeUuid, Clone)]
@@ -346,16 +358,14 @@ pub struct SecondPassMaterial {
     #[sampler(1)]
     source_image: Handle<Image>,
     #[uniform(2)]
-    intensity: f32
+    intensity: f32,
 }
 
-impl Material2d for SecondPassMaterial { 
+impl Material2d for SecondPassMaterial {
     fn fragment_shader() -> ShaderRef {
         "shaders/post_process_outline_pass.wgsl".into()
     }
-    
 }
-
 
 #[derive(AsBindGroup, TypeUuid, Clone)]
 #[uuid = "bc8f28eb-c0fb-43f1-a908-54821ea557e5"]
@@ -364,13 +374,11 @@ pub struct ThirdPassMaterial {
     #[sampler(1)]
     source_image: Handle<Image>,
     #[uniform(2)]
-    redius: f32
+    redius: f32,
 }
 
-impl Material2d for ThirdPassMaterial { 
+impl Material2d for ThirdPassMaterial {
     fn fragment_shader() -> ShaderRef {
         "shaders/post_process_finish_outline.wgsl".into()
-        
     }
-    
 }

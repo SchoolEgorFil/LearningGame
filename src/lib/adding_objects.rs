@@ -1,9 +1,19 @@
 use std::path::Path;
 
-use bevy::{prelude::{Query, With, Res, Input, KeyCode, Commands, NodeBundle, BuildChildren, TextBundle, Color, AssetServer, EventReader, ResMut}, ui::{Style, Size, Val, JustifyContent}, window::FileDragAndDrop, scene::Scene};
+use bevy::{
+    prelude::{
+        AssetServer, BuildChildren, Color, Commands, EventReader, Input, KeyCode, NodeBundle,
+        Query, Res, ResMut, TextBundle, With,
+    },
+    scene::Scene,
+    ui::{JustifyContent, Size, Style, Val},
+    window::FileDragAndDrop,
+};
 
-use super::{player_extensions::PlayerSettings, markers::{PlayerParentMarker, AddingObjectUiMarker}};
-
+use super::{
+    markers::{AddingObjectUiMarker, PlayerParentMarker},
+    player_extensions::PlayerSettings,
+};
 
 // pub fn object_dialogue_window(
 //     mut commands: Commands,
@@ -11,9 +21,9 @@ use super::{player_extensions::PlayerSettings, markers::{PlayerParentMarker, Add
 //     asset_server: Res<AssetServer>,
 //     keys: Res<Input<KeyCode>>
 // ) {
-//     if keys.just_pressed(KeyCode::A) && 
+//     if keys.just_pressed(KeyCode::A) &&
 //         (keys.pressed(KeyCode::LShift) || keys.pressed(KeyCode::RShift)) {
-        
+
 //         commands.spawn(NodeBundle {
 //                 style: Style {
 //                     size: Size::width(Val::Percent(70.0)),
@@ -26,10 +36,10 @@ use super::{player_extensions::PlayerSettings, markers::{PlayerParentMarker, Add
 //         .with_children(|p| {
 //             p.spawn(TextBundle::from_section(
 //                 "Example",
-//                 bevy::text::TextStyle { 
-//                     font: asset_server.load("fonts/FiraSans-Bold.ttf"), 
-//                     font_size: 30.0, 
-//                     color: Color::WHITE 
+//                 bevy::text::TextStyle {
+//                     font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+//                     font_size: 30.0,
+//                     color: Color::WHITE
 //                 }
 //             ));
 //         });
@@ -41,7 +51,7 @@ use super::{player_extensions::PlayerSettings, markers::{PlayerParentMarker, Add
 //     mut dnd_evr: EventReader<FileDragAndDrop>,
 //     mut asset_server: ResMut<AssetServer>
 // ) {
-    
+
 //     for ev in dnd_evr.iter() {
 //         println!("{:?}",ev);
 //         let FileDragAndDrop::DroppedFile { window, path_buf } = ev else {

@@ -1,25 +1,43 @@
 use std::time::Duration;
 
-use bevy::{prelude::{Res, Commands, AssetServer, Handle, Resource, Assets, AmbientLight, Color, Camera3dBundle, Transform, Vec3, PbrBundle, ResMut, Mesh, StandardMaterial, shape, Visibility, ComputedVisibility, GlobalTransform, MaterialMeshBundle, Entity, Name, Without, Query, Component, Camera3d, Camera, With, DirectionalLightBundle, DirectionalLight}, gltf::Gltf, scene::SceneBundle, render::{mesh::VertexAttributeValues, view::RenderLayers}, core_pipeline::clear_color::ClearColorConfig, transform::TransformBundle, time::Time, pbr::{CascadeShadowConfigBuilder, DirectionalLightShadowMap}};
-use bevy_rapier3d::{prelude::{RigidBody, Collider, Restitution, RapierContext, RapierConfiguration, TimestepMode}, rapier::prelude::IntegrationParameters};
+use bevy::{
+    core_pipeline::clear_color::ClearColorConfig,
+    gltf::Gltf,
+    pbr::{CascadeShadowConfigBuilder, DirectionalLightShadowMap},
+    prelude::{
+        shape, AmbientLight, AssetServer, Assets, Camera, Camera3d, Camera3dBundle, Color,
+        Commands, Component, ComputedVisibility, DirectionalLight, DirectionalLightBundle, Entity,
+        GlobalTransform, Handle, MaterialMeshBundle, Mesh, Name, PbrBundle, Query, Res, ResMut,
+        Resource, StandardMaterial, Transform, Vec3, Visibility, With, Without,
+    },
+    render::{mesh::VertexAttributeValues, view::RenderLayers},
+    scene::SceneBundle,
+    time::Time,
+    transform::TransformBundle,
+};
+use bevy_rapier3d::{
+    prelude::{Collider, RapierConfiguration, RapierContext, Restitution, RigidBody, TimestepMode},
+    rapier::prelude::IntegrationParameters,
+};
 
 use super::transition::TransitionMarker;
 
-
 #[derive(Component)]
 pub struct LoaderMarker;
-
 
 pub fn prepare_rapier(mut r_ctx: ResMut<RapierContext>) {
     // r_ctx.integration_parameters.max_ccd_substeps = 3;
     // r_ctx.integration_parameters.max_stabilization_iterations = 2;
 }
 
-pub fn load_scene(mut commands: Commands, asset: Res<AssetServer>, mut meshes: ResMut<Assets<Mesh>>) {
-
+pub fn load_scene(
+    mut commands: Commands,
+    asset: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+) {
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
-        brightness: 10.0/5.0f32,
+        brightness: 10.0 / 5.0f32,
     });
     commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
 
@@ -43,7 +61,7 @@ pub fn load_scene(mut commands: Commands, asset: Res<AssetServer>, mut meshes: R
 
     commands.spawn((
         LoaderMarker,
-        super::transition::TransitionMarker::new(false,Duration::from_millis(400))
+        super::transition::TransitionMarker::new(false, Duration::from_millis(400)),
     ));
 
     let glb = asset.load("untitled.glb#Scene0");
@@ -53,28 +71,20 @@ pub fn load_scene(mut commands: Commands, asset: Res<AssetServer>, mut meshes: R
 
         ..Default::default()
     });
-
-
-
-    // commands
-    // .spawn(RigidBody::Dynamic)
-    // .insert(Collider::ball(0.5))
-    // .insert(Restitution::coefficient(0.7))
-    // .insert(TransformBundle::from(Transform::from_xyz(0.0, 4.0, 0.0)));
 }
-
-#[derive(Component)]
-pub struct Inserted;
 
 pub fn update_timer(
     mut t: Query<&mut TransitionMarker, With<LoaderMarker>>,
     mut config: ResMut<RapierConfiguration>,
-    time: Res<Time>
+    time: Res<Time>,
 ) {
     let mut t = t.single_mut();
     if !t.started {
         t.started = true;
-        config.timestep_mode = TimestepMode::Fixed { dt: 0.000001, substeps: 1 };
+        config.timestep_mode = TimestepMode::Fixed {
+            dt: 0.000001,
+            substeps: 1,
+        };
     } else {
         t.tick(time.delta());
         if t.timer.just_finished() {
@@ -85,7 +95,4 @@ pub fn update_timer(
             };
         }
     }
-    
-
-    
 }

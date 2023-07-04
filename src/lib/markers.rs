@@ -9,6 +9,8 @@ pub struct PlayerCameraChildMarker;
 #[derive(Component)]
 pub struct PlayerCollisionChildMarker;
 
-
 #[derive(Component)]
 pub struct AddingObjectUiMarker;
+
+#[derive(Component)]
+pub struct ExploredGLTFObjectMarker;
