@@ -8,6 +8,6 @@ fn main() {
     
     let app = App::new()
                 .add_plugin(GamePlugin {})
-                // .add_plugin(EditorPlugin::default())
+                .add_plugin(EditorPlugin::default())
                 .run();
 }

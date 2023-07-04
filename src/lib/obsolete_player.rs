@@ -200,71 +200,8 @@ pub fn update_position(mut controllers: Query<&mut KinematicCharacterController>
     }
 }
 
-pub fn prepare_cursor(
-    mut windows: Query<&mut Window>,
-    // btn: Res<Input<MouseButton>>,
-    // key: Res<Input<KeyCode>>
-) {
-    let mut window = windows.single_mut();
 
-    window.cursor.grab_mode = CursorGrabMode::Locked;
-    window.cursor.visible = false;
-}
 
-pub fn unlock_cursor(
-    mut windows: Query<&mut Window>,
-    // btn: Res<Input<MouseButton>>,
-    key: Res<Input<KeyCode>>,
-) {
-    if key.just_pressed(KeyCode::Escape) {
-        let mut window = windows.single_mut();
-        window.cursor.grab_mode = CursorGrabMode::None;
-        window.cursor.visible = true;
-    }
-}
-
-pub fn move_camera(
-    mut player_camera_transform_q: Query<&mut Transform, With<PlayerCameraMarker>>,
-
-    mut mouse_motion_events: EventReader<MouseMotion>,
-) {
-    for ev in mouse_motion_events.iter() {
-        player_camera_transform_q.for_each_mut(|mut p| {
-            p.rotate_y(-ev.delta.x / 300.);
-            p.rotate_local_x(-ev.delta.y / 300.);
-        });
-    }
-}
-
-pub fn move_player(
-    mut controllers: Query<&mut ExternalImpulse, With<KinematicCharacterController>>,
-    mut player_camera_transform_q: Query<&Transform, With<PlayerCameraMarker>>,
-    key: Res<Input<KeyCode>>,
-) {
-    let Ok(mut c) = controllers.get_single_mut() else {return;};
-    // let Ok(p) = player_mesh_transform_q.get_single() else {return;};
-    let Ok(cam) = player_camera_transform_q.get_single() else {return;};
-    let mut v = Vec3::ZERO;
-
-    if key.pressed(KeyCode::W) {
-        v += cam.forward();
-    }
-    if key.pressed(KeyCode::D) {
-        v += cam.right();
-    }
-    if key.pressed(KeyCode::A) {
-        v += cam.left();
-    }
-    if key.pressed(KeyCode::S) {
-        v += cam.back();
-    }
-
-    if let Some(x) = v.try_normalize() {
-        v = x;
-    }
-
-    c.impulse += Vec3::new(0.4, 0.0, 0.4) * v;
-}
 
 pub fn jump(
     mut controllers: Query<(
