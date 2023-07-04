@@ -191,7 +191,7 @@ pub fn tackle_jump(
         let delta = Instant::now().duration_since(buf);
         
         let Some((_entity,toi)) = rapier_context.cast_ray(
-            jumpable_object.3.translation(), Vec3::NEG_Y, 1.0, false, QueryFilter::new().exclude_collider(jumpable_object.5)) else {
+            jumpable_object.3.translation(), Vec3::NEG_Y, 1.6, false, QueryFilter::new().exclude_collider(jumpable_object.5)) else {
             continue;
         };
 
@@ -200,7 +200,7 @@ pub fn tackle_jump(
 
         // TODO un-hardocde buffer
 
-        if delta.as_millis() < 300 && toi < 0.8 {
+        if delta.as_millis() < 300 && toi < 1.0 {
             jumpable_object.4.linvel.y = 0.0;
             jumpable_object.0.impulse += Vec3::new(0.0,5.0,0.0);
             println!("done"); // TODO LOSE SPEED
@@ -209,6 +209,7 @@ pub fn tackle_jump(
             jumpable_object.1.jump_buffer = None;
         }
     }
+    // TODO : save last jumped time, check it, check multiple rays;
 }
 
 pub fn move_camera(

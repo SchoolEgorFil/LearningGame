@@ -3,8 +3,9 @@ use std::time::Duration;
 //use bevy::audio::AudioPlugin;
 use bevy::pbr::DirectionalLightShadowMap;
 use bevy::sprite::Material2dPlugin;
+use bevy::winit::WinitPlugin;
 use bevy::{self, prelude::*};
-use bevy_kira_audio::prelude::*;
+// use bevy_kira_audio::prelude::*;
 use bevy_rapier3d::prelude::*;
 
 // use self::todo_post_process::{FirstPassMaterial, SecondPassMaterial, ThirdPassMaterial};
@@ -15,7 +16,7 @@ mod audio;
 mod colors;
 mod main_menu;
 mod markers;
-// mod obsolete_player;
+mod obsolete_player;
 mod player_extensions;
 mod scene_loader;
 mod transition;
@@ -45,11 +46,11 @@ impl Plugin for GamePlugin {
                 ..Default::default()
             }))
             .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-            .add_plugin(AudioPlugin)
+            // .add_plugin(AudioPlugin)
             .add_plugin(RapierDebugRenderPlugin::default())
             // .add_plugin(Material2dPlugin::<FirstPassMaterial>::default())
             // .add_plugin(Material2dPlugin::<SecondPassMaterial>::default())
-            // .add_plugin(Material2dPlugin::<ThirdPassMaterial>::default())
+            // .add_plugin(Material2dPlugi n::<ThirdPassMaterial>::default())
             // .add_plugin(shader::CharcoalMaterialPlugin)
             // .add_plugin(MaterialPlugin::<shader::CharcoalMaterial>::default())
             .add_startup_system(
@@ -119,14 +120,29 @@ impl Plugin for GamePlugin {
             .add_system(
                 player_extensions::queue_player_jump
                     .before(player_extensions::tackle_jump)
+                    .run_if(in_state(AppState::InGame))
             )
             .add_system(
                 player_extensions::tackle_jump
+                    .run_if(in_state(AppState::InGame))       
             ) 
             .add_system(
-                adding_objects::object_dialogue_window
-                    .run_if(in_state(AppState::InGame))   
+                obsolete_player::gltf_load_player
+                    .run_if(in_state(AppState::InGame))       
             )
+            .add_system(
+                obsolete_player::gltf_load_colliders
+                    .run_if(in_state(AppState::InGame))       
+            )
+            // .add_system(
+            //     adding_objects::dnd_gltf_scene
+            //     // .run_if(in_state(AppState::InGame))
+            // )
+            
+            // .add_system(
+            //     adding_objects::object_dialogue_window
+            //         .run_if(in_state(AppState::InGame))   
+            // )
             // .add_system(
             //     player::jump
             //         .run_if(in_state(AppState::InGame))

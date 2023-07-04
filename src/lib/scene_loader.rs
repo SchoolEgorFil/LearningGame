@@ -43,10 +43,10 @@ pub fn load_scene(mut commands: Commands, asset: Res<AssetServer>, mut meshes: R
 
     commands.spawn((
         LoaderMarker,
-        super::transition::TransitionMarker::new(false,Duration::from_secs(2))
+        super::transition::TransitionMarker::new(false,Duration::from_millis(400))
     ));
 
-    let glb = asset.load("test_scene.glb#Scene0");
+    let glb = asset.load("untitled.glb#Scene0");
 
     commands.spawn(SceneBundle {
         scene: glb,
@@ -74,7 +74,7 @@ pub fn update_timer(
     let mut t = t.single_mut();
     if !t.started {
         t.started = true;
-        config.timestep_mode = TimestepMode::Fixed { dt: 0.001, substeps: 1 };
+        config.timestep_mode = TimestepMode::Fixed { dt: 0.000001, substeps: 1 };
     } else {
         t.tick(time.delta());
         if t.timer.just_finished() {
