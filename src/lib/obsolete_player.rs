@@ -104,7 +104,9 @@ pub fn gltf_load_colliders(
             _ => {
                 commands.entity(object.0).insert(bundle);
                 commands.entity(mesh.0).insert(ExploredGLTFObjectMarker);
-                // commands.entity(mesh.0).despawn();
+                if (object.1.as_str().contains(TAGS::MODIFIER_INVISIBLE)) {
+                    commands.entity(mesh.0).despawn();
+                }
             }
         }
     }
@@ -114,7 +116,8 @@ pub mod TAGS {
     pub const PLAYER_SPAWN: &'static str = "PLAYER_SPAWNPOINT";
     pub const GENERIC_COLLIDER: &'static str = "TRI_C";
     pub const SPHERE_COLLIDER: &'static str = "SPHERE_C";
-    pub const MODIFIER_CONVEX_COLLIDER: &'static str = "TRI_C";
+    pub const MODIFIER_CONVEX_COLLIDER: &'static str = "TRI_C_CONVEX";
+    pub const MODIFIER_INVISIBLE: &'static str = "INV";
     pub const MODIFIER_RIGIDBODY: &'static str = "RB";
     // pub const RIGIDBODY: &'static str = "RB";
     // pub const BALL_RIGIDBODY: &'static str = "BALL_RB";
