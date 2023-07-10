@@ -16,7 +16,7 @@ use bevy_rapier3d::prelude::{
     KinematicCharacterControllerOutput, LockedAxes, RigidBody, Sleeping,
 };
 
-use super::markers::{ExploredGLTFObjectMarker, PlayerParentMarker};
+use crate::lib::consts::markers::{ExploredGLTFObjectMarker, PlayerParentMarker};
 
 pub fn gltf_load_player(
     mut commands: Commands,
@@ -32,7 +32,7 @@ pub fn gltf_load_player(
             let Ok(player) = player_query.get_single() else {
                 continue;
             };
-            println!("PLAYER LOADING");
+            // println!("PLAYER LOADING");
             commands
                 .entity(player.0)
                 .insert(TransformBundle::from_transform(
@@ -116,16 +116,14 @@ pub mod TAGS {
     pub const PLAYER_SPAWN: &'static str = "PLAYER_SPAWNPOINT";
     pub const GENERIC_COLLIDER: &'static str = "TRI_C";
     pub const SPHERE_COLLIDER: &'static str = "SPHERE_C";
+
+    pub const SUN: &'static str = "DIR_SUN";
+    pub const SKYBOX: &'static str = "SKYBOX";
+
     pub const MODIFIER_CONVEX_COLLIDER: &'static str = "TRI_C_CONVEX";
     pub const MODIFIER_INVISIBLE: &'static str = "INV";
     pub const MODIFIER_RIGIDBODY: &'static str = "RB";
-    // pub const RIGIDBODY: &'static str = "RB";
-    // pub const BALL_RIGIDBODY: &'static str = "BALL_RB";
-    pub const SUN: &'static str = "DIR_SUN";
-    pub const SKYBOX: &'static str = "SKYBOX";
     pub const MODIFIER_PARENT: &'static str = "PARENT";
-    // pub const SPHERICAL_RIGIDBODY: &'static str = "SPHERE_RB";
-    // pub const GENERIC_RIGIDBODY: &'static str = "TRI_RB";
 }
 
 // pub fn gltf_load_sun(

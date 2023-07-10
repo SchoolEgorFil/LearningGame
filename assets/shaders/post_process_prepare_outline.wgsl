@@ -25,8 +25,8 @@ fn fragment(
     let c = uv;
    
     // var mindist = 100000.;
-    // // var mini: vec2<f32> = c * f32(is_body(c));
-    // var mini: vec2<f32> = vec2<f32>(-1.0,-1.0);
+    // var mini: vec2<f32> = c * f32(is_body(c));
+    // var mini: vec2<f32> = c;
 
     
     // for(var i = -1; i <= 1; i+=1) {
@@ -67,4 +67,6 @@ fn fragment(
     } else {
         return vec4<f32>(-1.0,-1.0,-1.0,1.0);
     }
+        // return vec4<f32>(textureSample(texture,our_sampler,c/dim).xy,1.0,1.0);
+    
 }

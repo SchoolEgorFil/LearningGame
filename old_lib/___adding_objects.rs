@@ -11,7 +11,7 @@ use bevy::{
 };
 
 use super::{
-    markers::{AddingObjectUiMarker, PlayerParentMarker},
+    consts::markers::{AddingObjectUiMarker, PlayerParentMarker},
     player_extensions::PlayerSettings,
 };
 

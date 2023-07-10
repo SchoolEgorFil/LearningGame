@@ -33,21 +33,24 @@ fn fragment(
     
     
     let stored_uv = textureSample(texture, our_sampler, uv/dim);
+    // return vec4<f32>((stored_uv.xy-uv.xy)*(stored_uv.xy-uv.xy)/80.,0.0,1.0);
 
 
-    var mindist = (uv.x-stored_uv.x);
-        // ((uv.x-stored_uv.x)*(uv.x-stored_uv.x)+(uv.y-stored_uv.y)*(uv.y-stored_uv.y));
+    var mindist = ((uv.x-stored_uv.x)*(uv.x-stored_uv.x)+(uv.y-stored_uv.y)*(uv.y-stored_uv.y));
+    let n = f32(mindist < 12.0);
+    return vec4<f32>(n,0.0,0.0,n);
+    //     // ((uv.x-stored_uv.x)*(uv.x-stored_uv.x)+(uv.y-stored_uv.y)*(uv.y-stored_uv.y));
     
-    let a = (settings.intensity+1.0-mindist);
+    // let a = (settings.intensity+100.0-mindist);
 
-    // if(mindist<settings.intensity*100.) {
-    //     return vec4<f32>(1.0,1.0,1.0,1.0);
-    // } else if(mindist>=settings.intensity*settings.intensity && mindist<=(settings.intensity+1.0)*(settings.intensity+1.0)) {
+    // // if(mindist<settings.intensity*100.) {
+    // //     return vec4<f32>(1.0,1.0,1.0,1.0);
+    // // } else if(mindist>=settings.intensity*settings.intensity && mindist<=(settings.intensity+1.0)*(settings.intensity+1.0)) {
     //     return vec4<f32>(a,a,a,1.0);
-    // } else {
-    //     return vec4<f32>(0.0,0.0,0.0,1.0);
-    // }
+    // // } else {
+    // //     return vec4<f32>(0.0,0.0,0.0,1.0);
+    // // }
 
-    return vec4<f32>(uv.x/2000.,stored_uv.x/100.,stored_uv.z,1.0);
+    // // return vec4<f32>(uv.x/2000.,stored_uv.x/100.,stored_uv.z,1.0);
     
 }

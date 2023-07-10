@@ -1,29 +1,27 @@
 use std::time::Duration;
 
-use bevy::prelude::*;
+use bevy::{
+    prelude::{
+        AssetServer, BuildChildren, Button, ButtonBundle, Camera2dBundle, Changed, Color, Commands,
+        DespawnRecursiveExt, Entity, NextState, NodeBundle, Query, Res, ResMut, State, TextBundle,
+        With,
+    },
+    text::TextStyle,
+    time::Time,
+    ui::{
+        AlignItems, BackgroundColor, FlexDirection, Interaction, JustifyContent, PositionType,
+        Size, Style, UiRect, Val,
+    },
+};
 
-use super::{colors, transition::TransitionMarker, AppState};
+use crate::{
+    lib::tools::{consts::colors, transition::TransitionMarker},
+    AppState,
+};
 
-#[derive(Component)]
-pub struct MainMenuMarker;
-
-#[derive(Resource)]
-pub struct MainMenuResource {
-    to_game: TransitionMarker,
-    to_settings: TransitionMarker,
-}
-
-enum MainMenuButtonEnum {
-    start_game,
-    settings,
-    exit,
-}
-
-#[derive(Component)]
-pub struct MainMenuButtonMarker(MainMenuButtonEnum);
-
-#[derive(Component)]
-pub struct RootNode;
+use super::components::{
+    MainMenuButtonEnum, MainMenuButtonMarker, MainMenuMarker, MainMenuResource, RootNode,
+};
 
 pub fn button_interactivity(
     mut main_menu_res: ResMut<MainMenuResource>,

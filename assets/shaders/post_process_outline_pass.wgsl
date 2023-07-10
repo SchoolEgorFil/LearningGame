@@ -54,6 +54,7 @@ fn fragment(
         }
     }
     // return cur_uv;
-    // return vec4<f32>(mini.x,0.0,0.0,1.0);
-    return vec4<f32>(mini,100000.,1.0);
+    return vec4<f32>(mini.xy,0.0,1.0);
+    // return vec4<f32>(mini,100000.,1.0);
+    // return vec4<f32>(stored_uv.xy,100000.,1.0);
 }
