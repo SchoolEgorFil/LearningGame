@@ -8,22 +8,3 @@ pub mod colors {
         pub const DEFAULT_BORDER: Color = Color::rgb(0.8, 0.2, 0.2);
     }
 }
-
-pub mod markerks {
-    use bevy::prelude::Component;
-
-    #[derive(Component)]
-    pub struct PlayerParentMarker;
-
-    #[derive(Component)]
-    pub struct PlayerCameraChildMarker;
-
-    #[derive(Component)]
-    pub struct PlayerCollisionChildMarker;
-
-    #[derive(Component)]
-    pub struct AddingObjectUiMarker;
-
-    #[derive(Component)]
-    pub struct ExploredGLTFObjectMarker;
-}
