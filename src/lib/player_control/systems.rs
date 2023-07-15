@@ -1,3 +1,4 @@
+use bevy::core::Name;
 use bevy::{
     prelude::{
         BuildChildren, Commands, Entity, EventReader, EventWriter, GlobalTransform, Input, KeyCode,
@@ -6,8 +7,8 @@ use bevy::{
     utils::Instant,
 };
 use bevy_rapier3d::prelude::{
-    ActiveCollisionTypes, Ccd, Collider, Damping, ExternalImpulse, KinematicCharacterController,
-    LockedAxes, QueryFilter, RapierContext, RigidBody, Velocity,
+    ActiveCollisionTypes, Ccd, Collider, CollisionGroups, Damping, ExternalImpulse, Group,
+    KinematicCharacterController, LockedAxes, QueryFilter, RapierContext, RigidBody, Velocity,
 };
 
 use crate::lib::tools::{events, markers};
@@ -58,6 +59,13 @@ pub fn add_player(
             },
             collider: Collider::capsule_y(0.8 - 0.4, 0.4),
             velocity: Velocity::zero(),
+            collision_group: unsafe {
+                CollisionGroups::new(
+                    Group::from_bits_unchecked(0b00000000_00000000_00000000_00000001),
+                    Group::from_bits_unchecked(0b00000000_00000000_00000000_00000001),
+                )
+            },
+            name: Name::new("Player"),
         })
         .with_children(|p| {
             p.spawn(PlayerCameraContainerBundle {
@@ -65,6 +73,7 @@ pub fn add_player(
                 sp: SpatialBundle::from_transform(bevy::prelude::Transform::from_translation(
                     Vec3::Y * 0.8,
                 )),
+                name: Name::new("Player container for all cameras"),
             });
         });
 

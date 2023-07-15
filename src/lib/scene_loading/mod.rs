@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use bevy::pbr::CascadeShadowConfigBuilder;
+use bevy::prelude::{DirectionalLight, DirectionalLightBundle};
 use bevy::{
     pbr::DirectionalLightShadowMap,
     prelude::{
@@ -10,9 +12,10 @@ use bevy::{
     scene::SceneBundle,
     time::Time,
 };
+
 use bevy_rapier3d::prelude::{
-    ActiveCollisionTypes, Ccd, Collider, RapierConfiguration, RapierContext, RigidBody,
-    TimestepMode,
+    ActiveCollisionTypes, Ccd, Collider, CollisionGroups, Group, RapierConfiguration,
+    RapierContext, RigidBody, SolverGroups, TimestepMode,
 };
 
 use crate::AppState;
@@ -85,11 +88,28 @@ pub fn gltf_load_colliders(
             RigidBody::Fixed
         };
 
+        let collision_groups = if object.1.as_str().contains(TAGS::MODIFIER_PLACABLE) {
+            unsafe {
+                CollisionGroups::new(
+                    Group::from_bits_unchecked(0b10000000_00000000_00000000_00000001),
+                    Group::from_bits_unchecked(0b10000000_00000000_00000000_00000001),
+                )
+            }
+        } else {
+            unsafe {
+                CollisionGroups::new(
+                    Group::from_bits_unchecked(0b00000000_00000000_00000000_00000001),
+                    Group::from_bits_unchecked(0b00000000_00000000_00000000_00000001),
+                )
+            }
+        };
+
         let bundle = (
             rb,
             collider,
             ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_STATIC,
             Ccd::enabled(),
+            collision_groups,
         );
 
         match object.2 {
@@ -120,6 +140,7 @@ pub mod TAGS {
     pub const MODIFIER_INVISIBLE: &'static str = "INV";
     pub const MODIFIER_RIGIDBODY: &'static str = "RB";
     pub const MODIFIER_PARENT: &'static str = "PARENT";
+    pub const MODIFIER_PLACABLE: &'static str = "PLACABLE";
 }
 
 #[derive(Component)]
@@ -141,36 +162,36 @@ pub fn load_scene(
     });
     commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
 
-    // commands.spawn(DirectionalLightBundle {
-    //     directional_light: DirectionalLight {
-    //         shadows_enabled: true,
-    //         ..Default::default()
-    //     },
-    //     // This is a relatively small scene, so use tighter shadow
-    //     // cascade bounds than the default for better quality.
-    //     // We also adjusted the shadow map to be larger since we're
-    //     // only using a single cascade.
-    //     cascade_shadow_config: CascadeShadowConfigBuilder {
-    //         num_cascades: 1,
-    //         maximum_distance: 66.,
-    //         ..Default::default()
-    //     }
-    //     .into(),
-    //     ..Default::default()
-    // });
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            shadows_enabled: true,
+            ..Default::default()
+        },
+        cascade_shadow_config: CascadeShadowConfigBuilder {
+            num_cascades: 2,
+            maximum_distance: 66.,
+            ..Default::default()
+        }
+        .into(),
+        ..Default::default()
+    });
 
     commands.spawn((
         LoaderMarker,
         TransitionMarker::new(false, Duration::from_millis(400)),
+        Name::new("The thing I put just in case TM"),
     ));
 
     let glb = asset.load("untitled.glb#Scene0");
 
-    commands.spawn(SceneBundle {
-        scene: glb,
+    commands.spawn((
+        SceneBundle {
+            scene: glb,
 
-        ..Default::default()
-    });
+            ..Default::default()
+        },
+        Name::new("Main level scene"),
+    ));
 }
 
 pub fn update_timer(

@@ -1,3 +1,4 @@
+use bevy::core::Name;
 use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
     prelude::{
@@ -107,39 +108,39 @@ pub fn setup(
                 // RenderLayers::layer(1),
             ));
 
-            p.spawn((
-                markers::PlayerCamera,
-                markers::PlayerBorderPostProcessCamera,
-                Camera3dBundle {
-                    camera: Camera {
-                        target: RenderTarget::Image(image_handle.clone()),
-                        hdr: true,
-                        ..Default::default()
-                    },
-                    projection: bevy::prelude::Projection::Perspective(
-                        bevy::prelude::PerspectiveProjection {
-                            fov: std::f32::consts::FRAC_PI_2,
-                            ..Default::default()
-                        },
-                    ),
-                    camera_3d: Camera3d {
-                        clear_color: ClearColorConfig::Custom(Color::BLACK),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                EnvironmentMapLight {
-                    diffuse_map: asset_server
-                        .load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
-                    specular_map: asset_server
-                        .load("environment_maps/pisa_specular_rbg9e5_zstd.ktx2"),
-                },
-                UiCameraConfig { show_ui: false },
-                // RenderLayers::layer(1),
-            ));
+            // p.spawn((
+            //     markers::PlayerCamera,
+            //     markers::PlayerBorderPostProcessCamera,
+            //     Camera3dBundle {
+            //         camera: Camera {
+            //             target: RenderTarget::Image(image_handle.clone()),
+            //             hdr: true,
+            //             ..Default::default()
+            //         },
+            //         projection: bevy::prelude::Projection::Perspective(
+            //             bevy::prelude::PerspectiveProjection {
+            //                 fov: std::f32::consts::FRAC_PI_2,
+            //                 ..Default::default()
+            //             },
+            //         ),
+            //         camera_3d: Camera3d {
+            //             clear_color: ClearColorConfig::Custom(Color::BLACK),
+            //             ..Default::default()
+            //         },
+            //         ..Default::default()
+            //     },
+            //     EnvironmentMapLight {
+            //         diffuse_map: asset_server
+            //             .load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
+            //         specular_map: asset_server
+            //             .load("environment_maps/pisa_specular_rbg9e5_zstd.ktx2"),
+            //     },
+            //     UiCameraConfig { show_ui: false },
+            //     // RenderLayers::layer(1),
+            // ));
         });
     }
-
+    return;
     {
         // First pass
         let quad_handle = meshes_a.add(Mesh::from(Quad::new(Vec2::new(
@@ -164,6 +165,7 @@ pub fn setup(
             },
             RenderLayers::layer(3),
             markers::PostProcessMeshEntityMarker,
+            Name::new("Post process 2d quad #1"),
         ));
 
         // The post-processing pass camera.
@@ -180,6 +182,7 @@ pub fn setup(
             },
             RenderLayers::layer(3),
             markers::PlayerBorderPostProcessCamera,
+            Name::new("Post process camera #1"),
         ));
     }
 
@@ -211,6 +214,7 @@ pub fn setup(
             },
             RenderLayers::layer(3 + i),
             markers::PostProcessMeshEntityMarker,
+            Name::new("Post process 2d quad #2"),
         ));
 
         // The post-processing pass camera.
@@ -227,6 +231,7 @@ pub fn setup(
             },
             RenderLayers::layer(3 + i),
             markers::PlayerBorderPostProcessCamera,
+            Name::new("Post process camera #2"),
         ));
     }
 
@@ -256,6 +261,7 @@ pub fn setup(
             },
             RenderLayers::layer(3 + LEN + 1),
             markers::PostProcessMeshEntityMarker,
+            Name::new("Post process 2d quad #3"),
         ));
 
         // The post-processing pass camera.
@@ -274,6 +280,7 @@ pub fn setup(
             },
             RenderLayers::layer(3 + LEN + 1),
             markers::PlayerBorderPostProcessCamera,
+            Name::new("Post process camera #3"),
         ));
     }
 

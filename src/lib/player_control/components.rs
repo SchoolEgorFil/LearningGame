@@ -1,10 +1,11 @@
+use bevy::prelude::Name;
 use bevy::{
     prelude::{Bundle, Component, SpatialBundle},
     utils::Instant,
 };
 use bevy_rapier3d::prelude::{
-    ActiveCollisionTypes, Ccd, Collider, Damping, ExternalImpulse, KinematicCharacterController,
-    LockedAxes, RigidBody, Velocity,
+    ActiveCollisionTypes, Ccd, Collider, CollisionGroups, Damping, ExternalImpulse,
+    KinematicCharacterController, LockedAxes, RigidBody, Velocity,
 };
 
 use crate::lib::tools::markers;
@@ -56,6 +57,8 @@ pub struct PlayerBundle {
     pub damping: Damping,
     pub collider: Collider,
     pub velocity: Velocity,
+    pub collision_group: CollisionGroups,
+    pub name: Name,
 }
 
 #[derive(Bundle)]
@@ -63,4 +66,5 @@ pub struct PlayerCameraContainerBundle {
     pub marker: markers::PlayerCameraContainerMarker,
 
     pub sp: SpatialBundle,
+    pub name: Name,
 }
