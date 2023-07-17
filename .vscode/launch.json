@@ -10,14 +10,8 @@
             "name": "Debug executable 'v0_2023_coursework'",
             "cargo": {
                 "args": [
-                    "build",
-                    "--bin=v0_2023_coursework",
-                    "--package=v0_2023_coursework"
-                ],
-                "filter": {
-                    "name": "v0_2023_coursework",
-                    "kind": "bin"
-                }
+                    "run"
+                ]
             },
             "args": [],
             "cwd": "${workspaceFolder}"

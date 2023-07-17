@@ -37,10 +37,10 @@ pub fn button_interactivity(
     if state.0 == AppState::MainMenu {
         for (interaction, mut color, button_marker) in &mut button_interaction {
             match (&button_marker.0, *interaction) {
-                (MainMenuButtonEnum::start_game, Interaction::Clicked) => {
+                (MainMenuButtonEnum::StartGame, Interaction::Clicked) => {
                     main_menu_res.to_game.started = true;
                 }
-                (MainMenuButtonEnum::settings, Interaction::Clicked) => {
+                (MainMenuButtonEnum::Settings, Interaction::Clicked) => {
                     main_menu_res.to_settings.started = true;
                 }
                 _ => {}
@@ -121,7 +121,7 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                     // background_color: Color::rgb(0.65,0.65,0.65).into(),
                     ..Default::default()
                 })
-                .insert(MainMenuButtonMarker(MainMenuButtonEnum::start_game))
+                .insert(MainMenuButtonMarker(MainMenuButtonEnum::StartGame))
                 .with_children(|p| {
                     p.spawn(TextBundle::from_section(
                         "Start",
@@ -144,7 +144,7 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                     },
                     ..Default::default()
                 })
-                .insert(MainMenuButtonMarker(MainMenuButtonEnum::settings))
+                .insert(MainMenuButtonMarker(MainMenuButtonEnum::Settings))
                 .with_children(|p| {
                     p.spawn(TextBundle::from_section(
                         "Settings",

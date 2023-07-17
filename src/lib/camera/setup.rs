@@ -1,11 +1,13 @@
 use bevy::core::Name;
+use bevy::core_pipeline::bloom::BloomSettings;
+use bevy::core_pipeline::tonemapping::{DebandDither, Tonemapping};
 use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
     prelude::{
         shape::{self, Quad},
         AssetServer, Assets, BuildChildren, Camera, Camera2d, Camera2dBundle, Camera3d,
         Camera3dBundle, Color, Commands, Entity, EnvironmentMapLight, EventReader, Image, Mesh,
-        Query, ResMut, Transform, UiCameraConfig, Vec2, Vec3, With,
+        Query, ResMut, Transform, Vec2, Vec3, With,
     },
     render::{
         camera::RenderTarget,
@@ -96,6 +98,8 @@ pub fn setup(
                         clear_color: ClearColorConfig::Custom(Color::BLACK),
                         ..Default::default()
                     },
+                    tonemapping: Tonemapping::ReinhardLuminance,
+                    dither: DebandDither::Enabled,
                     ..Default::default()
                 },
                 EnvironmentMapLight {
@@ -103,6 +107,9 @@ pub fn setup(
                         .load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
                     specular_map: asset_server
                         .load("environment_maps/pisa_specular_rbg9e5_zstd.ktx2"),
+                },
+                BloomSettings {
+                    ..Default::default()
                 },
                 // UiCameraConfig { show_ui: false },
                 // RenderLayers::layer(1),

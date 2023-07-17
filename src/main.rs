@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 pub mod lib;
 
+use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 use bevy_editor_pls::prelude::*;
 use bevy_rapier3d::{
     prelude::{NoUserData, RapierPhysicsPlugin},
@@ -17,6 +18,12 @@ fn main() {
             watch_for_changes: true,
             ..Default::default()
         }))
+        .add_plugin(OverlayPlugin {
+            font_size: 23.0,
+            font: Some("fonts/FiraSans-Bold.ttf"),
+
+            ..default()
+        })
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         //
         .add_plugin(EditorPlugin::default())

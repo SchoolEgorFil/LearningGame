@@ -1,7 +1,10 @@
 use std::time::Duration;
 
-use bevy::pbr::CascadeShadowConfigBuilder;
-use bevy::prelude::{DirectionalLight, DirectionalLightBundle};
+use bevy::pbr::{CascadeShadowConfigBuilder, NotShadowCaster, NotShadowReceiver};
+use bevy::prelude::{
+    Children, DespawnRecursiveExt, DirectionalLight, DirectionalLightBundle, TransformBundle,
+};
+use bevy::render::view::NoFrustumCulling;
 use bevy::{
     pbr::DirectionalLightShadowMap,
     prelude::{
@@ -15,15 +18,13 @@ use bevy::{
 
 use bevy_rapier3d::prelude::{
     ActiveCollisionTypes, Ccd, Collider, CollisionGroups, Group, RapierConfiguration,
-    RapierContext, RigidBody, SolverGroups, TimestepMode,
+    RapierContext, RigidBody, TimestepMode,
 };
 
 use crate::AppState;
 
 use super::tools::{
-    events::SpawnPlayer,
-    markers::{ExploredGLTFObjectMarker, PlayerParentMarker},
-    transition::TransitionMarker,
+    events::SpawnPlayer, markers::ExploredGLTFObjectMarker, transition::TransitionMarker,
 };
 
 pub fn gltf_load_player(
@@ -63,7 +64,7 @@ pub fn gltf_load_colliders(
 
         let collider = match object.1.as_str() {
             x if x.contains(TAGS::GENERIC_COLLIDER) => {
-                let compute_shape = if object.1.as_str().contains(TAGS::MODIFIER_CONVEX_COLLIDER) {
+                let compute_shape = if object.1.as_str().contains(TAGS::MODIFIER_DECOMP_COLLIDER) {
                     bevy_rapier3d::prelude::ComputedColliderShape::ConvexDecomposition(
                         bevy_rapier3d::prelude::VHACDParameters::default(),
                     )
@@ -95,6 +96,13 @@ pub fn gltf_load_colliders(
                     Group::from_bits_unchecked(0b10000000_00000000_00000000_00000001),
                 )
             }
+        } else if object.1.as_str().contains(TAGS::MODIFIER_MIRROR) {
+            unsafe {
+                CollisionGroups::new(
+                    Group::from_bits_unchecked(0b01000000_00000000_00000000_00000001),
+                    Group::from_bits_unchecked(0b01000000_00000000_00000000_00000001),
+                )
+            }
         } else {
             unsafe {
                 CollisionGroups::new(
@@ -115,12 +123,17 @@ pub fn gltf_load_colliders(
         match object.2 {
             Some(parent_id) if object.1.as_str().contains(TAGS::MODIFIER_PARENT) => {
                 commands.entity(parent_id.get()).insert(bundle);
-                commands.entity(mesh.0).despawn();
+                commands.entity(object.0).despawn_recursive();
             }
             _ => {
                 commands.entity(object.0).insert(bundle);
                 commands.entity(mesh.0).insert(ExploredGLTFObjectMarker);
-                if (object.1.as_str().contains(TAGS::MODIFIER_INVISIBLE)) {
+                if object.1.as_str().contains(TAGS::MODIFIER_INVISIBLE) {
+                    commands.entity(object.0).insert((
+                        NoFrustumCulling,
+                        NotShadowCaster,
+                        NotShadowReceiver,
+                    ));
                     commands.entity(mesh.0).despawn();
                 }
             }
@@ -129,18 +142,20 @@ pub fn gltf_load_colliders(
 }
 
 pub mod TAGS {
-    pub const PLAYER_SPAWN: &'static str = "PLAYER_SPAWNPOINT";
-    pub const GENERIC_COLLIDER: &'static str = "TRI_C";
-    pub const SPHERE_COLLIDER: &'static str = "SPHERE_C";
+    pub const PLAYER_SPAWN: &str = "PLAYER_SPAWNPOINT";
+    pub const GENERIC_COLLIDER: &str = "TRI_C";
+    pub const SPHERE_COLLIDER: &str = "SPHERE_C";
 
-    pub const SUN: &'static str = "DIR_SUN";
-    pub const SKYBOX: &'static str = "SKYBOX";
+    pub const SUN: &str = "DIR_SUN";
+    pub const SKYBOX: &str = "SKYBOX";
 
-    pub const MODIFIER_CONVEX_COLLIDER: &'static str = "TRI_C_CONVEX";
-    pub const MODIFIER_INVISIBLE: &'static str = "INV";
-    pub const MODIFIER_RIGIDBODY: &'static str = "RB";
-    pub const MODIFIER_PARENT: &'static str = "PARENT";
-    pub const MODIFIER_PLACABLE: &'static str = "PLACABLE";
+    pub const MODIFIER_DECOMP_COLLIDER: &str = "TRI_C_DECOMP";
+    pub const MODIFIER_INVISIBLE: &str = "INV";
+    pub const MODIFIER_RIGIDBODY: &str = "RB";
+    pub const MODIFIER_PARENT: &str = "PARENT";
+    pub const MODIFIER_PLACABLE: &str = "PLACABLE";
+
+    pub const MODIFIER_MIRROR: &str = "MIRROR";
 }
 
 #[derive(Component)]
@@ -182,7 +197,7 @@ pub fn load_scene(
         Name::new("The thing I put just in case TM"),
     ));
 
-    let glb = asset.load("untitled.glb#Scene0");
+    let glb = asset.load("survival.glb#Scene0");
 
     commands.spawn((
         SceneBundle {
@@ -229,6 +244,53 @@ impl Plugin for SceneLoaderPlugin {
             .add_system(load_scene.in_schedule(OnEnter(AppState::InGame)))
             .add_system(update_timer.run_if(in_state(AppState::InGame)))
             .add_system(gltf_load_player.run_if(in_state(AppState::InGame)))
-            .add_system(gltf_load_colliders.run_if(in_state(AppState::InGame)));
+            .add_system(gltf_load_colliders.run_if(in_state(AppState::InGame)))
+            .add_system(gltf_load_sun.run_if(in_state(AppState::InGame)));
+    }
+}
+
+pub fn gltf_load_sun(
+    mut commands: Commands,
+    gltf_obj: Query<
+        (Entity, &Name, &Transform, Option<&Children>),
+        Without<ExploredGLTFObjectMarker>,
+    >,
+    gltf_m: Query<Entity, (With<Parent>, With<Handle<Mesh>>)>,
+    asset_server: Res<AssetServer>,
+) {
+    for m in gltf_obj.iter() {
+        if m.1.as_str().contains(TAGS::SUN) {
+            commands
+                .spawn(DirectionalLightBundle {
+                    directional_light: DirectionalLight {
+                        shadows_enabled: true,
+                        illuminance: 32000.0,
+                        ..Default::default()
+                    },
+                    // This is a relatively small scene, so use tighter shadow
+                    // cascade bounds than the default for better quality.
+                    // We also adjusted the shadow map to be larger since we're
+                    // only using a single cascade.
+                    cascade_shadow_config: CascadeShadowConfigBuilder {
+                        num_cascades: 2,
+                        maximum_distance: 126.,
+                        ..Default::default()
+                    }
+                    .into(),
+                    ..Default::default()
+                })
+                .insert(TransformBundle::from_transform(Transform::from_rotation(
+                    m.2.clone().rotation,
+                )));
+            commands.entity(m.0).despawn();
+        } else if m.1.as_str().contains(TAGS::SKYBOX) && m.3.is_some() {
+            m.3.unwrap().iter().for_each(|e| {
+                if gltf_m.contains(e.clone()) {
+                    commands
+                        .entity(e.clone())
+                        .insert((NotShadowCaster, NotShadowReceiver));
+                }
+            });
+        }
     }
 }
