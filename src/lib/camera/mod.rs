@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{in_state, IntoSystemConfig, Plugin},
+    prelude::{in_state, Plugin, Update, IntoSystemConfigs},
     sprite::Material2dPlugin,
 };
 
@@ -22,9 +22,11 @@ impl Plugin for GameCameraPlugin {
         "Plugin for every camera this game ever needs"
     }
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugin(Material2dPlugin::<FirstPassMaterial>::default())
-            .add_plugin(Material2dPlugin::<SecondPassMaterial>::default())
-            .add_plugin(Material2dPlugin::<ThirdPassMaterial>::default())
-            .add_system(setup.run_if(in_state(AppState::InGame)));
+        app.add_plugins((
+            Material2dPlugin::<FirstPassMaterial>::default(),
+            Material2dPlugin::<SecondPassMaterial>::default(),
+            Material2dPlugin::<ThirdPassMaterial>::default()
+        ))
+            .add_systems(Update, setup.run_if(in_state(AppState::InGame)));
     }
 }

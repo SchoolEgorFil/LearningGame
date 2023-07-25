@@ -1,4 +1,6 @@
-use bevy::prelude::*;
+use std::time::Duration;
+
+use bevy::{prelude::*, gltf::GltfPlugin};
 
 pub mod lib;
 
@@ -15,33 +17,40 @@ fn main() {
     println!("{:?}", std::env::var_os("CARGO_MANIFEST_DIR"));
     App::new()
         .add_plugins(DefaultPlugins.set(AssetPlugin {
-            watch_for_changes: true,
+            watch_for_changes: Some(bevy::asset::ChangeWatcher { delay: Duration::from_millis(200) }),
             ..Default::default()
         }))
-        .add_plugin(OverlayPlugin {
+        .add_plugins(OverlayPlugin {
             font_size: 23.0,
-            font: Some("fonts/FiraSans-Bold.ttf"),
+            // font: Some("fonts/FiraSans-Bold.ttf"),
 
             ..default()
         })
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        //
-        .add_plugin(EditorPlugin::default())
-        .add_plugin(RapierDebugRenderPlugin::default())
-        //
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+//
+        .add_plugins((
+            EditorPlugin::default(),
+            RapierDebugRenderPlugin::default()
+        ))
+//
         .add_state::<AppState>()
-        //
+//
         .add_event::<events::SpawnPlayer>()
         .add_event::<events::SpawnPlayerCamera>()
         .add_event::<events::PlacementEvent>()
-        //
-        .add_plugin(main_menu::MainMenuPlugin)
-        .add_plugin(scene_loading::SceneLoaderPlugin)
-        .add_plugin(camera::GameCameraPlugin)
-        .add_plugin(ingame_ui::InGameUiPlugin)
-        .add_plugin(player_control::PlayerPlugin)
-        .add_plugin(placing_parts::PlayerPlacingPlugin)
-        //
+        .add_event::<events::AttachCollider>()
+        .add_event::<events::ModifyCollisionGroup>()
+        .add_event::<events::AttachSkybox>()
+//
+        .add_plugins((
+            main_menu::MainMenuPlugin, 
+            scene_loading::SceneLoaderPlugin,
+            camera::GameCameraPlugin,
+            ingame_ui::InGameUiPlugin,
+            player_control::PlayerPlugin,
+            placing_parts::PlayerPlacingPlugin
+        ))
+//
         .run();
 }
 

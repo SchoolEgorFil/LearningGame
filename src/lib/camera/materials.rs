@@ -1,6 +1,6 @@
 use bevy::{
     prelude::{Component, Handle, Image},
-    reflect::TypeUuid,
+    reflect::{TypeUuid, TypePath},
     render::render_resource::{AsBindGroup, ShaderRef},
     sprite::Material2d,
 };
@@ -17,7 +17,7 @@ pub struct PostProcessCameraMarker;
 // Region below declares of the custom material handling post processing effect
 
 /// Our custom post processing material
-#[derive(AsBindGroup, TypeUuid, Clone)]
+#[derive(AsBindGroup, TypeUuid, Clone, TypePath)]
 #[uuid = "bc2f08eb-a0fb-73f1-a908-54871ea597d5"]
 pub struct FirstPassMaterial {
     /// In this example, this image will be the result of the main camera.
@@ -32,7 +32,7 @@ impl Material2d for FirstPassMaterial {
     }
 }
 
-#[derive(AsBindGroup, TypeUuid, Clone)]
+#[derive(AsBindGroup, TypeUuid, Clone, TypePath)]
 #[uuid = "bc2f28eb-c0fb-43f1-a908-54871ea597d5"]
 pub struct SecondPassMaterial {
     /// In this example, this image will be the result of the main camera.
@@ -49,7 +49,7 @@ impl Material2d for SecondPassMaterial {
     }
 }
 
-#[derive(AsBindGroup, TypeUuid, Clone)]
+#[derive(AsBindGroup, TypeUuid, Clone, TypePath)]
 #[uuid = "bc8f28eb-c0fb-43f1-a908-54821ea557e5"]
 pub struct ThirdPassMaterial {
     #[texture(0)]

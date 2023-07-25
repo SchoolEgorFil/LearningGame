@@ -1,4 +1,4 @@
-use bevy::prelude::{in_state, IntoSystemAppConfig, IntoSystemConfig, OnEnter, OnExit, Plugin};
+use bevy::prelude::{in_state, OnEnter, OnExit, Plugin, IntoSystemConfigs, Update};
 
 use crate::AppState;
 
@@ -14,8 +14,8 @@ impl Plugin for MainMenuPlugin {
         "For handling main menu"
     }
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system(prepare_main_menu.in_schedule(OnEnter(AppState::MainMenu)))
-            .add_system(button_interactivity.run_if(in_state(AppState::MainMenu)))
-            .add_system(destroy_main_menu.in_schedule(OnExit(AppState::MainMenu)));
+        app.add_systems(OnEnter(AppState::MainMenu), prepare_main_menu)
+            .add_systems(Update, button_interactivity.run_if(in_state(AppState::MainMenu)))
+            .add_systems(OnExit(AppState::MainMenu), destroy_main_menu);
     }
 }
