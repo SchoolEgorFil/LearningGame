@@ -3,13 +3,15 @@ use std::ops::{Div, Mul};
 use bevy::asset::Handle;
 use bevy::math::{Quat, Vec3};
 use bevy::pbr::AlphaMode;
-use bevy::prelude::{Added, Bundle, Changed, Color, DespawnRecursiveExt, Entity, Image, Name, Or, Update};
+use bevy::prelude::{
+    Added, Bundle, Changed, Color, DespawnRecursiveExt, Entity, Image, Name, Or, Update,
+};
 use bevy::{
     prelude::{
         in_state, shape::Plane, AssetServer, Assets, Commands, Component, EventReader, EventWriter,
-        GlobalTransform, Input, IntoSystemConfigs, KeyCode,
-        Mesh, MouseButton, OnEnter, Parent, Plugin, Query, Res, ResMut, Resource, SpatialBundle,
-        StandardMaterial, Transform, Visibility, With, Without,
+        GlobalTransform, Input, IntoSystemConfigs, KeyCode, Mesh, MouseButton, OnEnter, Parent,
+        Plugin, Query, Res, ResMut, Resource, SpatialBundle, StandardMaterial, Transform,
+        Visibility, With, Without,
     },
     scene::SceneBundle,
 };
@@ -32,13 +34,13 @@ impl Plugin for PlayerPlacingPlugin {
             placing_object: None,
             placement: None,
         })
-        .add_systems(OnEnter(AppState::InGame),setup)
+        .add_systems(OnEnter(AppState::InGame), setup)
         .add_systems(
             Update,
             (
                 (initiate_placement, place_object).chain(),
                 preview_placement_grid,
-                put_laser
+                put_laser,
             )
                 .distributive_run_if(in_state(AppState::InGame)),
         );
@@ -80,7 +82,8 @@ pub fn initiate_placement(
 ) {
     match res.choosing_stage {
         PlacingObjectChoosingStage::NotChoosing => {
-            if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) && keys.just_pressed(KeyCode::A)
+            if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight])
+                && keys.just_pressed(KeyCode::A)
             {
                 res.choosing_stage = PlacingObjectChoosingStage::ChooseCarousel;
             }
@@ -96,7 +99,7 @@ pub fn initiate_placement(
         }
         PlacingObjectChoosingStage::ChoseAndPlacing => {
             if mouse.just_pressed(MouseButton::Left) {
-                println!("hey");
+                // println!("hey");
                 placement_ev_w.send(PlacementEvent {
                     object: res.placing_object.unwrap().clone(),
                     form: PlacingForm::Grid,

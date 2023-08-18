@@ -36,3 +36,7 @@ pub struct PostProcessMeshEntityMarker;
 //
 #[derive(Component)]
 pub struct ExploredGLTFObjectMarker;
+
+// light
+#[derive(Component)]
+pub struct ExploredLightObjectMarker;

@@ -14,17 +14,15 @@ impl Plugin for PlayerPlugin {
         "Plugin for player control"
     }
     fn build(&self, app: &mut bevy::prelude::App) {
-        app            
-            .add_systems(
-                Update,
-                (
-                    add_player,
-                    move_player,
-                    move_camera,
-                    (queue_player_jump, tackle_jump)
-                        .chain()
-                )
-                    .distributive_run_if(in_state(AppState::InGame)),
-            );
+        app.add_systems(
+            Update,
+            (
+                add_player,
+                move_player,
+                move_camera,
+                (queue_player_jump, tackle_jump).chain(),
+            )
+                .distributive_run_if(in_state(AppState::InGame)),
+        );
     }
 }

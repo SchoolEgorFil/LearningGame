@@ -1,111 +1,326 @@
 use std::time::Duration;
 
-use bevy::core_pipeline::Skybox;
-use bevy::gltf::GltfExtras;
+use super::broadcast::{self, Action, Actor};
+use super::tools::collision_groups;
+use super::tools::events::{AttachCollider, ModifyCollisionGroup};
+use super::tools::markers::ExploredLightObjectMarker;
+use super::tools::{
+    events::SpawnPlayer, markers::ExploredGLTFObjectMarker, transition::TransitionMarker,
+};
+use crate::lib::audio::CollisionAudio;
+use crate::AppState;
+use bevy::gltf::{Gltf, GltfExtras};
 use bevy::pbr::{CascadeShadowConfigBuilder, NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::{
-    Children, DespawnRecursiveExt, DirectionalLight, DirectionalLightBundle, TransformBundle, Startup, IntoSystemConfigs, Update, Local, World, EventReader, Visibility, PostUpdate,
+    Children, DirectionalLight, DirectionalLightBundle, EventReader, IntoSystemConfigs, PointLight,
+    Resource, Update, Visibility, World,
 };
-use bevy::render::view::NoFrustumCulling;
+use bevy::utils::HashMap;
 use bevy::{
     pbr::DirectionalLightShadowMap,
     prelude::{
-        in_state, AmbientLight, AssetServer, Assets, Color, Commands, Component, Entity,
-        EventWriter, Handle, Mesh, Name, OnEnter, Parent,
-        Plugin, Query, Res, ResMut, Transform, With, Without,
+        in_state, AssetServer, Assets, Color, Commands, Component, Entity, EventWriter, Handle,
+        Mesh, Name, OnEnter, Parent, Plugin, Query, Res, ResMut, Transform, With, Without,
     },
     scene::SceneBundle,
     time::Time,
 };
 use bevy_rapier3d::prelude::{
-    ActiveCollisionTypes, Ccd, Collider, CollisionGroups, Group, RapierConfiguration,
-    RapierContext, RigidBody, TimestepMode, Sensor,
+    Collider, ColliderMassProperties, CollisionGroups, Group, RapierConfiguration, RapierContext,
+    Real, RigidBody, Sensor, Sleeping, TimestepMode, Velocity,
 };
 use serde_json::Value;
-use crate::AppState;
-use super::tools::events::{AttachCollider, ModifyCollisionGroup, AttachSkybox};
-use super::tools::markers::PlayerMainCamera;
-use super::tools::{
-    events::SpawnPlayer, markers::ExploredGLTFObjectMarker, transition::TransitionMarker,
-};
+
+#[derive(Clone, Copy)]
+pub enum ColliderType {
+    FromMeshTris,
+    FromMeshConvexHull,
+    FromMeshDecomp,
+    Ball,
+    Cuboid,
+    Cone,
+    HeightMap,
+    _FromMeshConvexManual,
+}
 
 ///
-/// spawn_point: true,
-/// mesh_collider_marker: true      <-------------------------- TODO
-/// rigidbody_marker: "Dynamic" | "Fixed" | "KPB" | "KVB"
-/// 
-/// placable_plane_marker: true
-/// placed_mirror_marker: true
-/// 
-/// invinsible: true
+/// spawn_point
+///     | ambient_intensity: f32
+///     | ambient_color: (f32,f32,f32,f32)
+///     | skybox: string
+///
+///
+/// mesh_collider_marker
+///     | collider_type = "tris" | "hull" | "decomposition" | "ball" | "cuboid" | "cone" | "height_map" | "from_mesh_convex"
+///
+/// rigidbody: "Dynamic" | "Fixed" | "KPB" | "KVB"
+///
+/// placable_plane: true
+/// placed_mirror: true
+///
+/// is_visible: true
 /// collider_sensor: true
-/// 
-/// skybox: string
-/// 
+///
+/// sun_marker: true
+///     | sun_intensity: f32
+///     | sun_color: (f32,f32,f32,f32)
+///     | sun_shadows: true
+///
+///
+///
+/// audio_on_collision: string
+///     + collider_sensor
+///     + invisisble?
+///     + mesh_collider_marker
+///         + ...
+///
+///
+///
+///
+/// action:open_door: bool
+/// action:key_door: u16 (key number)
+/// action:stand_button: u16 (key number)
+/// action:press_button: u16 (key number)
+///
+///
+/// action:* : TODO
+///
+///  ============== ACTIONS ==========
+///
+/// ::stand_button = u64 - on press, fires an event with that key number
+/// ::stand_button#press = u64 - how long will it be pressed? (0 for toggle button)
+/// ::stand_button#cooldown = u64 - how often you can press button
+///
+/// ::open_door
+/// ::open_door#keyed = u64 - if 0, not keyed
+/// ::open_door#
+///
+///
+///
+///
+///
 enum CustomProps {
+    // todo!() why names of object are included?
     _Unhandled,
+    _Resolved,
 
-    PlayerSpawnPoint,
-    MeshTrisCollider,
+    PlayerSpawnPoint {
+        ambient: Option<(f32, Color)>,
+        skybox: Option<String>,
+    },
+    MeshCollider(ColliderType),
     MeshRigidBody(RigidBody),
-
     ContructorPlacablePlane,
     PlayerPlacedMirror,
-
-    Invinsible,
+    IsVisible(bool),
     ColliderSensor,
+    Sun {
+        intensity: f32,
+        color: Color,
+        shadows: bool,
+    },
+    MassProp(f32),
+    CollisionAudio(String), // todo volume etc...
 
-    Sun,
-    Skybox(String),
+    Action(Box<dyn Action>),
 }
 
 impl CustomProps {
-    fn convert(name: &String, value: &Value) -> Self {
+    fn convert(name: &String, value: &Value, main: &serde_json::map::Map<String, Value>) -> Self {
+        if name == "ambient_intensity"
+            || name == "ambient_color"
+            || name == "skybox"
+            || name == "collider_type"
+            || name == "sun_intensity"
+            || name == "sun_color"
+            || name == "sun_shadows"
+        {
+            return CustomProps::_Resolved;
+        }
         if name == "spawn_point" && value.as_bool().unwrap_or(false) {
-            return CustomProps::PlayerSpawnPoint;
+            let int = match main.get("ambient_intensity").and_then(|p| p.as_f64()) {
+                Some(v) => Some(v as f32),
+                _ => {
+                    println!("ambient intensity is not set");
+                    None
+                }
+            };
+            let color = match main
+                .get("ambient_color")
+                .and_then(|p| p.as_array())
+                .and_then(|p| {
+                    p.get(0..4).and_then(|x| {
+                        x.iter()
+                            .map(|p| p.as_f64().and_then(|p| Some(p as f32)))
+                            .collect::<Option<Vec<f32>>>()
+                    })
+                }) {
+                Some(v) => Some(Color::Rgba {
+                    red: v[0],
+                    green: v[1],
+                    blue: v[2],
+                    alpha: v[3],
+                }),
+                _ => {
+                    println!("ambient color is not set");
+                    None
+                }
+            };
+            let amb = match (int, color) {
+                (Some(a), Some(b)) => Some((a, b)),
+                _ => None,
+            };
+
+            return CustomProps::PlayerSpawnPoint {
+                ambient: amb,
+                skybox: main
+                    .get("skybox")
+                    .and_then(|p| p.as_str())
+                    .and_then(|p| Some(p.to_string())),
+            };
         }
         if name == "mesh_collider_marker" && value.as_bool().unwrap_or(false) {
-            return CustomProps::MeshTrisCollider;
+            let typ = match main.get("collider_type").and_then(|p| p.as_str()) {
+                None => panic!(""),
+
+                Some("tris") => ColliderType::FromMeshTris,
+                Some("hull") => ColliderType::FromMeshConvexHull,
+                Some("decomposition") => ColliderType::FromMeshDecomp,
+                Some("from_mesh_convex") => ColliderType::_FromMeshConvexManual,
+                Some("ball") => ColliderType::Ball,
+                Some("cuboid") => todo!(),
+                Some("cone") => todo!(),
+                Some("heightmap") => todo!(),
+
+                Some(_) => panic!(""),
+            };
+            return CustomProps::MeshCollider(typ);
         }
-        if name == "rigidbody_marker" && value.is_string() {
+        if name == "rigidbody" && value.is_string() {
             return match value.as_str().unwrap() {
                 "Dynamic" => CustomProps::MeshRigidBody(RigidBody::Dynamic),
                 "Fixed" => CustomProps::MeshRigidBody(RigidBody::Fixed),
                 "KPB" => CustomProps::MeshRigidBody(RigidBody::KinematicPositionBased),
                 "KVB" => CustomProps::MeshRigidBody(RigidBody::KinematicVelocityBased),
-                _ => {println!("RIGIDBODY MARKER INVALID VALUE"); return CustomProps::_Unhandled;}
+                _ => {
+                    println!("RIGIDBODY MARKER INVALID VALUE");
+                    return CustomProps::_Unhandled;
+                }
             };
         }
-        if name == "placable_plane_marker" && value.as_bool().unwrap_or(false) {
+        if name == "placable_plane" && value.as_bool().unwrap_or(false) {
             return CustomProps::ContructorPlacablePlane;
         }
-        if name == "placed_mirror_marker" && value.as_bool().unwrap_or(false) {
+        if name == "placed_mirror" && value.as_bool().unwrap_or(false) {
             return CustomProps::PlayerPlacedMirror;
         }
-        if name == "invisible" && value.as_bool().unwrap_or(false) { 
-            return  CustomProps::Invinsible;
+        if name == "is_visible" {
+            return CustomProps::IsVisible(value.as_bool().unwrap());
         }
-        if name == "sensor" && value.as_bool().unwrap_or(false) { 
-            return  CustomProps::ColliderSensor;
+        if name == "collider_sensor" && value.as_bool().unwrap_or(false) {
+            return CustomProps::ColliderSensor;
         }
-        if name == "sun" && value.as_bool().unwrap_or(false) { 
-            return  CustomProps::Sun;
+        if name == "sun_marker" && value.as_bool().unwrap_or(false) {
+            let int = match main.get("sun_intensity").and_then(|p| p.as_f64()) {
+                Some(v) => v as f32,
+                _ => panic!("sun intensity is not set"),
+            };
+            let color = match main
+                .get("sun_color")
+                .and_then(|p| p.as_array())
+                .and_then(|p| {
+                    p.get(0..4).and_then(|x| {
+                        x.iter()
+                            .map(|p| p.as_f64().and_then(|p| Some(p as f32)))
+                            .collect::<Option<Vec<f32>>>()
+                    })
+                }) {
+                Some(v) => v,
+                _ => panic!("sun color is not set"),
+            };
+            let shadows = match main.get("sun_shadows") {
+                Some(v) => v.as_bool().unwrap(),
+                _ => panic!("sun shadows is not set"),
+            };
+            return CustomProps::Sun {
+                intensity: int,
+                color: Color::Rgba {
+                    red: color[0],
+                    green: color[1],
+                    blue: color[2],
+                    alpha: color[3],
+                },
+                shadows: shadows,
+            };
         }
-        if name == "skybox" && value.is_string() {
-            return CustomProps::Skybox(value.as_str().unwrap().to_string());
+        if name == "audio_on_collision" && value.is_string() {
+            return CustomProps::CollisionAudio(value.as_str().unwrap().to_string());
+        }
+        if name == "density" && value.is_f64() {
+            return CustomProps::MassProp(value.as_f64().unwrap() as f32);
+        }
+        // if name == "door_test" && value.as_bool().unwrap_or(false) {
+        //     return CustomProps::TESTdoor;
+        // }
+        let a = name.split(":").collect::<Vec<_>>();
+        // dbg!(a.clone());
+        // dbg!(a.get(0) == Some(&&"action"), a.get(1).is_some(), a.get(2).is_none()); /////////////////////////////
+        if a.get(0) == Some(&&"action") && a.get(1).is_some() && a.get(2).is_none() {
+            match a[1] {
+                "open_door" => {
+                    let mut a = broadcast::open_door::OpenDoorAction::new(value.clone(), &main);
+                    a.change_name("open_door".into());
+                    return CustomProps::Action(Box::new(a));
+                }
+                "ball_falling_01" => {
+                    let mut a =
+                        broadcast::ball_falling_01::BallFalling01Action::new(value.clone(), &main);
+                    a.change_name("ball_falling_01".into());
+                    return CustomProps::Action(Box::new(a));
+                }
+                "stand_button" => {
+                    let mut a =
+                        broadcast::stand_button::StandButtonAction::new(value.clone(), &main);
+                    a.change_name("stand_button".into());
+                    return CustomProps::Action(Box::new(a));
+                }
+                _ => {
+                    println!("ooohhh unhandled!");
+                }
+            }
         }
         CustomProps::_Unhandled
     }
 }
 
+pub fn gltf_adjust_light(
+    mut commands: Commands,
+    mut gltf_node_q: Query<(Entity, &mut PointLight), Without<ExploredLightObjectMarker>>,
+) {
+    for mut e in gltf_node_q.iter_mut() {
+        e.1.intensity /= 170.;
+        commands.entity(e.0).insert(ExploredLightObjectMarker);
+        // e.1.shadows_enabled = true;
+    }
+}
+
 pub fn gltf_load_extras(
     mut commands: Commands,
-    gltf_node_q: Query<(Entity, &GltfExtras, &Transform, Option<&Children>), Without<ExploredGLTFObjectMarker>>,
+    gltf_node_q: Query<
+        (
+            Entity,
+            &GltfExtras,
+            &Transform,
+            Option<&Children>,
+            Option<&Name>,
+        ),
+        Without<ExploredGLTFObjectMarker>,
+    >,
+    mesh_bopys: Query<&Handle<Mesh>>,
     mut player_creation_ev_w: EventWriter<SpawnPlayer>,
     mut mesh_collider_ev_w: EventWriter<AttachCollider>,
     mut mesh_collision_group_ev_w: EventWriter<ModifyCollisionGroup>,
-    mut skybox_ev_w: EventWriter<AttachSkybox>,
-    ass: Res<AssetServer>
+    ass: Res<AssetServer>,
 ) {
     for node in gltf_node_q.iter() {
         commands.entity(node.0).insert(ExploredGLTFObjectMarker);
@@ -114,62 +329,92 @@ pub fn gltf_load_extras(
         let object = object.as_object().unwrap();
 
         for extra in object.iter() {
-            match CustomProps::convert(extra.0, extra.1) {
-                CustomProps::PlayerSpawnPoint => {
+            match CustomProps::convert(extra.0, extra.1, &object) {
+                CustomProps::_Resolved => {}
+                CustomProps::PlayerSpawnPoint { ambient, skybox } => {
                     player_creation_ev_w.send(SpawnPlayer {
                         transform: Transform::from_translation(node.2.clone().translation),
+                        camera_params: (ambient, skybox),
                     });
-        
+
                     commands.entity(node.0).despawn();
-                },
-                CustomProps::MeshTrisCollider => {
+                }
+                CustomProps::MeshCollider(collider) => {
                     if let Some(children) = node.3 {
                         for mesh in children {
-                            mesh_collider_ev_w.send(AttachCollider {
-                                collider_type: super::tools::events::ColliderType::FromMeshTris,
-                                entity: mesh.clone()
-                            });
+                            if mesh_bopys.contains(*mesh) {
+                                mesh_collider_ev_w.send(AttachCollider {
+                                    collider_type: collider,
+                                    entity: mesh.clone(),
+                                });
+                            }
                         }
                     }
-                },
+                }
                 CustomProps::ColliderSensor => {
                     commands.entity(node.0).insert(Sensor);
-                },
-                CustomProps::Invinsible => {
-                    if let Some(children) = node.3 {
-                        for mesh in children {
-                            commands.entity(*mesh).insert((Visibility::Hidden,NotShadowCaster,NotShadowReceiver));
-                        }
+                }
+                CustomProps::IsVisible(v) => {
+                    if !v {
+                        commands.entity(node.0).insert((
+                            Visibility::Hidden,
+                            NotShadowCaster,
+                            NotShadowReceiver,
+                        ));
+                    } else {
+                        commands.entity(node.0).insert(Visibility::Visible);
                     }
-                },
+                    // if let Some(children) = node.3 {
+                    //     println!("why? {:#?} \n {:#?}",node.4, node.1);
+                    //     for mesh in children {
+                    //         commands.entity(*mesh).insert((
+                    //             Visibility::Hidden,
+                    //             NotShadowCaster,
+                    //             NotShadowReceiver,
+                    //         ));
+                    //     }
+                    // }
+                }
                 CustomProps::MeshRigidBody(rb) => {
-                    commands.entity(node.0).insert(rb);
-                },
+                    commands
+                        .entity(node.0)
+                        .insert((Sleeping::default(), rb, Velocity::default()));
+                }
+                CustomProps::MassProp(mass) => {
+                    commands
+                        .entity(node.0)
+                        .insert(ColliderMassProperties::Density(mass));
+                }
                 CustomProps::PlayerPlacedMirror => {
                     mesh_collision_group_ev_w.send(ModifyCollisionGroup {
                         entity: node.0,
-                        flags:   0b01000000_00000000_00000000_00000001,
-                        members: 0b01000000_00000000_00000000_00000001,
+                        flags: collision_groups::mirror_system,
+                        members: collision_groups::mirror_system,
+                        override_groups: false,
                     });
-                },
+                }
                 CustomProps::ContructorPlacablePlane => {
                     mesh_collision_group_ev_w.send(ModifyCollisionGroup {
                         entity: node.0,
-                        flags:   0b10000000_00000000_00000000_00000001,
-                        members: 0b10000000_00000000_00000000_00000001,
+                        flags: collision_groups::mirror_system,
+                        members: collision_groups::mirror_system,
+                        override_groups: false,
                     });
-                },
-                CustomProps::Sun => {
+                }
+                CustomProps::Sun {
+                    color,
+                    intensity,
+                    shadows,
+                } => {
+                    commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
+
                     commands.entity(node.0).insert(DirectionalLightBundle {
                         directional_light: DirectionalLight {
-                            shadows_enabled: true,
-                            illuminance: 32000.0,
+                            shadows_enabled: shadows,
+                            illuminance: intensity,
+                            color,
                             ..Default::default()
                         },
-                        // This is a relatively small scene, so use tighter shadow
-                        // cascade bounds than the default for better quality.
-                        // We also adjusted the shadow map to be larger since we're
-                        // only using a single cascade.
                         cascade_shadow_config: CascadeShadowConfigBuilder {
                             num_cascades: 4,
                             maximum_distance: 126.,
@@ -178,176 +423,171 @@ pub fn gltf_load_extras(
                         .into(),
                         ..Default::default()
                     });
-                },
-                CustomProps::Skybox(str) => {
-                    skybox_ev_w.send(AttachSkybox { image: ass.load(str) });
+                }
+                CustomProps::CollisionAudio(audio) => {
+                    commands
+                        .entity(node.0)
+                        .insert(CollisionAudio::from_handle(ass.load(audio)));
+                    // commands.entity(node.0).insert(bundle)
+                }
+                CustomProps::Action(action) => {
+                    commands.entity(node.0).add(|id, world: &mut World| {
+                        if let Some(mut actor) = world.get_mut::<Actor>(id) {
+                            if let Some(_) = actor.0.insert(action.name(), action) {
+                                panic!();
+                            }
+                        } else {
+                            let mut h = HashMap::new();
+                            if let Some(_) = h.insert(action.name(), action) {
+                                panic!();
+                            }
+                            world.entity_mut(id).insert(Actor(h));
+                        }
+                    });
+                    // commands.entity(node.0).insert(Actor(Box::new(OpenDoorAction::default())));
                 }
                 CustomProps::_Unhandled => {
-                    println!("UNHANDLED {:#?}",extra.1);
+                    println!("UNHANDLED {:#?}: {:#?}", extra.0, extra.1);
                 }
             }
         }
-        
     }
-
 }
+
+// struct CollisionAudio {
+//     asset: Handle<Audio>
+// }
 
 pub fn attach_collider(
     mut commands: Commands,
     mut attach_collider_ev_r: EventReader<AttachCollider>,
-    mesh_q: Query<(&Parent,&Handle<Mesh>)>,
-    mesh_ass: Res<Assets<Mesh>>
+    mesh_q: Query<(&Parent, &Handle<Mesh>)>,
+    collision_group_q: Query<(Option<&CollisionGroups>, &Transform)>,
+    mesh_ass: Res<Assets<Mesh>>,
 ) {
     for event in attach_collider_ev_r.iter() {
         if let Ok(mesh) = mesh_q.get(event.entity) {
-            let c = 
-                match event.collider_type {
-                    super::tools::events::ColliderType::FromMeshTris => 
-                         Collider::from_bevy_mesh(mesh_ass.get(mesh.1).unwrap(), &bevy_rapier3d::prelude::ComputedColliderShape::TriMesh).unwrap(),
-                    _ => panic!()       
-                };
+            let c = match event.collider_type {
+                ColliderType::FromMeshTris => Collider::from_bevy_mesh(
+                    mesh_ass.get(mesh.1).unwrap(),
+                    &bevy_rapier3d::prelude::ComputedColliderShape::TriMesh,
+                )
+                .unwrap(),
+                ColliderType::FromMeshConvexHull => Collider::from_bevy_mesh(
+                    mesh_ass.get(mesh.1).unwrap(),
+                    &bevy_rapier3d::prelude::ComputedColliderShape::ConvexHull,
+                )
+                .unwrap(),
+                ColliderType::FromMeshDecomp => Collider::from_bevy_mesh(
+                    mesh_ass.get(mesh.1).unwrap(),
+                    &bevy_rapier3d::prelude::ComputedColliderShape::ConvexDecomposition(
+                        bevy_rapier3d::prelude::VHACDParameters {
+                            ..Default::default()
+                        },
+                    ),
+                )
+                .unwrap(), // todo!()
+                ColliderType::Ball => {
+                    // println!("{:?}", collision_group_q.get(mesh.0.get()).unwrap().1.scale);
+                    // Collider::ball(collision_group_q.get(mesh.0.get()).unwrap().1.scale.x)
+                    Collider::ball(1.0)
+                    // Collider::from_bevy_mesh(
+                    //     mesh_ass.get(mesh.1).unwrap(),
+                    //     &bevy_rapier3d::prelude::ComputedColliderShape::ConvexHull,
+                    // )
+                    // .unwrap()
+                }
+                _ => todo!(),
+            };
             unsafe {
-                commands.entity(mesh.0.get())
-                    .insert((
-                        c, 
-                        CollisionGroups::new(
-                            Group::from_bits_unchecked(0b00000000_00000000_00000000_00000001), 
-                            Group::from_bits_unchecked(0b00000000_00000000_00000000_00000001)
-                        )));
+                if collision_group_q.get(mesh.0.get()).unwrap().0.is_none() {
+                    commands.entity(mesh.0.get()).insert(CollisionGroups::new(
+                        Group::from_bits_unchecked(collision_groups::player_collision),
+                        Group::from_bits_unchecked(collision_groups::player_collision),
+                    ));
+                }
+                commands.entity(mesh.0.get()).insert(c);
             }
         }
-    }
-}
-
-#[derive(Default)]
-pub struct LocalEventSkybox(pub Option<AttachSkybox>);
-
-pub fn attach_skybox(
-    mut commands: Commands,
-    query: Query<Entity, With<PlayerMainCamera>>,
-    mut wait: Local<LocalEventSkybox>,
-    mut ev_r: EventReader<AttachSkybox>
-) {
-    for ev in ev_r.iter() {
-        wait.0 = Some(ev.clone());
-    }
-    if wait.0.is_some() {
-    if let Ok(en) = query.get_single() {
-        if let Some(sk) = &wait.0 {
-            commands.entity(en).insert(Skybox(
-                sk.image.clone()
-            ));
-            wait.0 = None;
-        }
-    }
     }
 }
 
 pub fn attach_collision_groups(
     mut commands: Commands,
-    qu: Query<Option<&CollisionGroups>,With<Collider>>,
-    mut ev_r: EventReader<ModifyCollisionGroup>
+    qu: Query<Option<&CollisionGroups>, With<Collider>>,
+    mut ev_r: EventReader<ModifyCollisionGroup>,
 ) {
     for ev in ev_r.iter() {
-        let group: (u32,u32) = 'out: {
+        let group: (u32, u32) = 'out: {
             let Ok(k) = qu.get(ev.entity) else {
                 break 'out (
-                    0b00000000_00000000_00000000_00000001,
-                    0b00000000_00000000_00000000_00000001,
+                    collision_groups::empty,
+                    collision_groups::empty,
                 );
             };
             let Some(e) = k else {
                 break 'out (
-                    0b00000000_00000000_00000000_00000001,
-                    0b00000000_00000000_00000000_00000001,
+                    collision_groups::empty,
+                    collision_groups::empty,
                 );
             };
-            (
-                e.filters.bits(),
-                e.memberships.bits(),
-            )
+            (e.filters.bits(), e.memberships.bits())
         };
-        unsafe {
-            commands.entity(ev.entity).insert(CollisionGroups {
-                memberships: Group::from_bits_unchecked(
-                    group.0 | ev.members
-                ),
-                filters: Group::from_bits_unchecked(
-                    group.1 | ev.flags
-                )
-            });
-        }    
+        if ev.override_groups {
+            unsafe {
+                commands.entity(ev.entity).insert(CollisionGroups {
+                    memberships: Group::from_bits_unchecked(ev.members),
+                    filters: Group::from_bits_unchecked(ev.flags),
+                });
+            }
+        } else {
+            unsafe {
+                commands.entity(ev.entity).insert(CollisionGroups {
+                    memberships: Group::from_bits_unchecked(group.0 | ev.members),
+                    filters: Group::from_bits_unchecked(group.1 | ev.flags),
+                });
+            }
+        }
     }
-}
-
- 
-
-pub mod TAGS {
-    pub const PLAYER_SPAWN: &str = "PLAYER_SPAWNPOINT";
-    pub const GENERIC_COLLIDER: &str = "TRI_C";
-    pub const SPHERE_COLLIDER: &str = "SPHERE_C";
-
-    pub const SUN: &str = "DIR_SUN";
-    pub const SKYBOX: &str = "SKYBOX";
-
-    pub const MODIFIER_DECOMP_COLLIDER: &str = "TRI_C_DECOMP";
-    pub const MODIFIER_INVISIBLE: &str = "INV";
-    pub const MODIFIER_RIGIDBODY: &str = "RB";
-    pub const MODIFIER_PARENT: &str = "PARENT";
-    pub const MODIFIER_PLACABLE: &str = "PLACABLE";
-
-    pub const MODIFIER_MIRROR: &str = "MIRROR";
 }
 
 #[derive(Component)]
 pub struct LoaderMarker;
 
 pub fn prepare_rapier(mut r_ctx: ResMut<RapierContext>) {
-    // r_ctx.integration_parameters.max_ccd_substeps = 3;
-    // r_ctx.integration_parameters.max_stabilization_iterations = 2;
+    r_ctx.integration_parameters.max_ccd_substeps = 5;
+    r_ctx.integration_parameters.max_stabilization_iterations = 3;
 }
 
-pub fn load_scene(
-    mut commands: Commands,
-    asset: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
-) {
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 10.0 / 5.0f32,
-    });
-    commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
+#[derive(Resource)]
+pub struct SceneTempRes(Handle<Gltf>);
 
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            shadows_enabled: true,
-            ..Default::default()
-        },
-        cascade_shadow_config: CascadeShadowConfigBuilder {
-            num_cascades: 2,
-            maximum_distance: 66.,
-            ..Default::default()
-        }
-        .into(),
-        ..Default::default()
-    });
-
+pub fn load_scene(mut commands: Commands, asset: Res<AssetServer>) {
     commands.spawn((
         LoaderMarker,
         TransitionMarker::new(false, Duration::from_millis(400)),
         Name::new("The thing I put just in case TM"),
     ));
 
-    let glb = asset.load("survival.glb#Scene0");
+    let glb = asset.load("tutorial_level.glb");
 
-    commands.spawn((
-        SceneBundle {
-            scene: glb,
+    commands.insert_resource(SceneTempRes(glb.clone()));
+}
 
-            ..Default::default()
-        },
-        Name::new("Main level scene"),
-    ));
+pub fn spawn_gltf(mut commands: Commands, gltf: Option<Res<SceneTempRes>>, ass: Res<Assets<Gltf>>) {
+    if let Some(gltf) = gltf {
+        if let Some(gltf) = ass.get(&gltf.0) {
+            commands.spawn((
+                SceneBundle {
+                    scene: gltf.scenes[0].clone(),
+
+                    ..Default::default()
+                },
+                Name::new("Main level scene"),
+            ));
+            commands.remove_resource::<SceneTempRes>();
+        }
+    }
 }
 
 pub fn update_timer(
@@ -381,19 +621,20 @@ impl Plugin for SceneLoaderPlugin {
         "For loading in-game scenes"
     }
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(Startup,prepare_rapier)
-            .add_systems(OnEnter(AppState::InGame),load_scene)
-            .add_systems(Update,
+        app
+            // .add_systems(Startup, prepare_rapier)
+            .add_systems(OnEnter(AppState::InGame), (load_scene).chain())
+            .add_systems(
+                Update,
                 (
+                    spawn_gltf,
                     update_timer,
                     // gltf_load_colliders,
-                    (gltf_load_extras,
-                    (attach_collider,
-                    attach_skybox,
-                    attach_collision_groups)).chain(),
-                ).distributive_run_if(in_state(AppState::InGame))
-            )
-            
-            ;
+                    prepare_rapier,
+                    (gltf_load_extras, (attach_collider, attach_collision_groups)).chain(),
+                    gltf_adjust_light,
+                )
+                    .distributive_run_if(in_state(AppState::InGame)),
+            );
     }
 }

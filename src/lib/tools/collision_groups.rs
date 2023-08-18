@@ -1,0 +1,4 @@
+pub const empty: u32 = 0b00000000_00000000_00000000_00000000;
+pub const player_collision: u32 = 0b00000000_00000000_00000000_00000001;
+pub const mirror_system: u32 = 0b10000000_00000000_00000000_00000000;
+pub const interactable_object: u32 = 0b01000000_00000000_00000000_00000000; // todo! is obsolete??

@@ -1,6 +1,6 @@
 pub mod systems;
 
-use bevy::prelude::{in_state, OnEnter, Plugin, Update, IntoSystemConfigs};
+use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter, Plugin, Update};
 
 use crate::AppState;
 
@@ -13,10 +13,7 @@ impl Plugin for InGameUiPlugin {
         "Plugin for handling in-game ui"
     }
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(OnEnter(AppState::InGame), 
-            prepare_cursor
-        ).add_systems(Update, 
-            unlock_cursor.run_if(in_state(AppState::InGame))
-        );
+        app.add_systems(OnEnter(AppState::InGame), prepare_cursor)
+            .add_systems(Update, unlock_cursor.run_if(in_state(AppState::InGame)));
     }
 }

@@ -64,8 +64,7 @@ pub fn button_interactivity(
             }
 
             roots.for_each_mut(|mut p| {
-                p.top =
-                    Val::Percent(0. - main_menu_res.to_game.ease_in_out().unwrap() * 100.)
+                p.top = Val::Percent(0. - main_menu_res.to_game.ease_in_out().unwrap() * 100.)
             });
         }
         if main_menu_res.to_settings.started {
@@ -73,8 +72,7 @@ pub fn button_interactivity(
                 main_menu_res.to_settings.tick(time.delta());
             }
             roots.for_each_mut(|mut p| {
-                p.left =
-                    Val::Percent(0. - main_menu_res.to_settings.ease_in().unwrap() * 100.)
+                p.left = Val::Percent(0. - main_menu_res.to_settings.ease_in().unwrap() * 100.)
             });
         }
     }
