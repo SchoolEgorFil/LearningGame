@@ -1,4 +1,6 @@
 use bevy::core::Name;
+use bevy::core_pipeline::Skybox;
+use bevy::prelude::{AmbientLight, AssetServer, EnvironmentMapLight};
 use bevy::{
     prelude::{
         BuildChildren, Commands, Entity, EventReader, EventWriter, GlobalTransform, Input, KeyCode,
@@ -11,7 +13,7 @@ use bevy_rapier3d::prelude::{
     KinematicCharacterController, LockedAxes, QueryFilter, RapierContext, RigidBody, Velocity,
 };
 
-use crate::lib::tools::{events, markers};
+use crate::lib::tools::{collision_groups, events, markers};
 
 use super::components::{JumpableCharacter, PlayerBundle, PlayerCameraContainerBundle};
 
@@ -57,12 +59,12 @@ pub fn add_player(
                 linear_damping: 0.0,
                 angular_damping: 0.0,
             },
-            collider: Collider::capsule_y(0.8 - 0.4, 0.4),
+            collider: Collider::capsule_y(0.75 - 0.4, 0.4),
             velocity: Velocity::zero(),
             collision_group: unsafe {
                 CollisionGroups::new(
-                    Group::from_bits_unchecked(0b00000000_00000000_00000000_00000001),
-                    Group::from_bits_unchecked(0b00000000_00000000_00000000_00000001),
+                    Group::from_bits_unchecked(collision_groups::player_collision),
+                    Group::from_bits_unchecked(collision_groups::player_collision),
                 )
             },
             name: Name::new("Player"),
@@ -71,13 +73,15 @@ pub fn add_player(
             p.spawn(PlayerCameraContainerBundle {
                 marker: markers::PlayerCameraContainerMarker,
                 sp: SpatialBundle::from_transform(bevy::prelude::Transform::from_translation(
-                    Vec3::Y * 0.8,
+                    Vec3::Y * 0.67,
                 )),
                 name: Name::new("Player container for all cameras"),
             });
         });
 
-    camera_ev_w.send(events::SpawnPlayerCamera);
+    camera_ev_w.send(events::SpawnPlayerCamera {
+        camera_params: x.camera_params.clone(),
+    });
 }
 
 pub fn move_player(
@@ -107,7 +111,7 @@ pub fn move_player(
         v = x;
     }
 
-    c.impulse += Vec3::new(0.4, 0.0, 0.4) * v;
+    c.impulse += Vec3::new(0.2, 0.0, 0.2) * v;
 }
 
 pub fn tackle_jump(
@@ -133,14 +137,14 @@ pub fn tackle_jump(
             continue;
         };
 
-        println!("toi: {}, buf: {:?}", toi, buf);
+        // println!("toi: {}, buf: {:?}", toi, buf);
 
         // TODO un-hardocde buffer
 
         if delta.as_millis() < 300 && toi < 1.0 {
             jumpable_object.4.linvel.y = 0.0;
-            jumpable_object.0.impulse += Vec3::new(0.0, 5.0, 0.0);
-            println!("done"); // TODO LOSE SPEED
+            jumpable_object.0.impulse += Vec3::new(0.0, 3.5, 0.0);
+            // println!("done"); // TODO LOSE SPEED
             jumpable_object.1.jump_buffer = None;
         } else if delta.as_millis() >= 300 {
             jumpable_object.1.jump_buffer = None;
@@ -158,7 +162,7 @@ pub fn queue_player_jump(
     };
 
     if keys.just_pressed(KeyCode::Space) {
-        println!("buffered");
+        // println!("buffered");
         p.jump_buffer = Some(Instant::now());
     }
 }

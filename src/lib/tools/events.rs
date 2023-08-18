@@ -1,15 +1,62 @@
-use bevy::prelude::Transform;
+use std::sync::Arc;
 
-use crate::lib::placing_parts::{PlacingForm, PlacingObject};
+use bevy::{
+    prelude::{Color, Entity, Event, Handle, Image, KeyCode, Transform},
+    text::TextStyle,
+};
 
+use crate::lib::{
+    placing_parts::{PlacingForm, PlacingObject},
+    scene_loading::ColliderType,
+};
+
+#[derive(Event)]
 pub struct SpawnPlayer {
     pub transform: Transform,
+    pub camera_params: (Option<(f32, Color)>, Option<String>),
 }
 
-pub struct SpawnPlayerCamera;
+#[derive(Event)]
+pub struct SpawnPlayerCamera {
+    pub camera_params: (Option<(f32, Color)>, Option<String>),
+}
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 pub struct PlacementEvent {
     pub object: PlacingObject,
     pub form: PlacingForm,
+}
+
+#[derive(Event)]
+pub struct AttachCollider {
+    pub entity: Entity,
+    pub collider_type: ColliderType,
+}
+
+#[derive(Event)]
+pub struct ModifyCollisionGroup {
+    pub entity: Entity,
+    pub members: u32,
+    pub flags: u32,
+    pub override_groups: bool,
+}
+
+#[derive(Event, Clone)]
+pub struct AttachSkybox {
+    pub image: Handle<Image>,
+}
+
+#[derive(Event, Clone)]
+pub struct ProposePopup {
+    pub key: Option<KeyCode>,
+    pub text: Arc<String>,
+    pub style: TextStyle,
+    pub priority: u32,
+}
+
+#[derive(Event, Clone)]
+pub struct ButtonState {
+    pub is_pressed: bool,
+    pub just_changed: bool,
+    pub id: u64,
 }

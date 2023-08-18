@@ -1,4 +1,4 @@
-use bevy::prelude::{in_state, IntoSystemConfig, IntoSystemConfigs, Plugin};
+use bevy::prelude::{in_state, IntoSystemConfigs, Plugin, Update};
 
 use crate::AppState;
 
@@ -14,13 +14,15 @@ impl Plugin for PlayerPlugin {
         "Plugin for player control"
     }
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system(add_player)
-            .add_system(move_player.run_if(in_state(AppState::InGame)))
-            .add_systems(
-                (queue_player_jump, tackle_jump)
-                    .chain()
-                    .distributive_run_if(in_state(AppState::InGame)),
+        app.add_systems(
+            Update,
+            (
+                add_player,
+                move_player,
+                move_camera,
+                (queue_player_jump, tackle_jump).chain(),
             )
-            .add_system(move_camera.run_if(in_state(AppState::InGame)));
+                .distributive_run_if(in_state(AppState::InGame)),
+        );
     }
 }

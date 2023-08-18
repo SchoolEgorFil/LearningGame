@@ -1,28 +1,27 @@
+use std::ops::{Div, Mul};
+
 use bevy::asset::Handle;
-use bevy::math::{EulerRot, Quat, Vec3};
+use bevy::math::{Quat, Vec3};
 use bevy::pbr::AlphaMode;
-use bevy::prelude::{Image, Name};
+use bevy::prelude::{
+    Added, Bundle, Changed, Color, DespawnRecursiveExt, Entity, Image, Name, Or, Update,
+};
 use bevy::{
     prelude::{
-        in_state,
-        shape::{Plane, Quad},
-        AssetServer, Assets, Bundle, Color, Commands, Component, EventReader, EventWriter,
-        GlobalTransform, Input, IntoSystemAppConfig, IntoSystemConfig, IntoSystemConfigs, KeyCode,
-        Mesh, MouseButton, OnEnter, Parent, Plugin, Query, Res, ResMut, Resource, SpatialBundle,
-        StandardMaterial, Transform, Vec2, Visibility, With, Without,
+        in_state, shape::Plane, AssetServer, Assets, Commands, Component, EventReader, EventWriter,
+        GlobalTransform, Input, IntoSystemConfigs, KeyCode, Mesh, MouseButton, OnEnter, Parent,
+        Plugin, Query, Res, ResMut, Resource, SpatialBundle, StandardMaterial, Transform,
+        Visibility, With, Without,
     },
     scene::SceneBundle,
-    transform::commands,
 };
-use bevy_rapier3d::prelude::{Group, QueryFilter, RapierContext};
+use bevy_rapier3d::prelude::{CollisionGroups, Group, QueryFilter, RapierContext};
 
 use crate::AppState;
 
-use super::{
-    player_control,
-    tools::{events::PlacementEvent, markers::PlayerCameraContainerMarker},
-};
+use super::tools::{events::PlacementEvent, markers::PlayerCameraContainerMarker};
 
+use bevy_debug_text_overlay::screen_print;
 pub struct PlayerPlacingPlugin;
 
 impl Plugin for PlayerPlacingPlugin {
@@ -35,11 +34,14 @@ impl Plugin for PlayerPlacingPlugin {
             placing_object: None,
             placement: None,
         })
-        .add_system(setup.in_schedule(OnEnter(AppState::InGame)))
-        .add_system(initiate_placement.run_if(in_state(AppState::InGame)))
+        .add_systems(OnEnter(AppState::InGame), setup)
         .add_systems(
-            (place_object, preview_placement_grid)
-                .chain()
+            Update,
+            (
+                (initiate_placement, place_object).chain(),
+                preview_placement_grid,
+                put_laser,
+            )
                 .distributive_run_if(in_state(AppState::InGame)),
         );
     }
@@ -80,7 +82,8 @@ pub fn initiate_placement(
 ) {
     match res.choosing_stage {
         PlacingObjectChoosingStage::NotChoosing => {
-            if keys.any_pressed([KeyCode::LShift, KeyCode::RShift]) && keys.just_pressed(KeyCode::A)
+            if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight])
+                && keys.just_pressed(KeyCode::A)
             {
                 res.choosing_stage = PlacingObjectChoosingStage::ChooseCarousel;
             }
@@ -96,6 +99,7 @@ pub fn initiate_placement(
         }
         PlacingObjectChoosingStage::ChoseAndPlacing => {
             if mouse.just_pressed(MouseButton::Left) {
+                // println!("hey");
                 placement_ev_w.send(PlacementEvent {
                     object: res.placing_object.unwrap().clone(),
                     form: PlacingForm::Grid,
@@ -103,7 +107,6 @@ pub fn initiate_placement(
                 res.choosing_stage = PlacingObjectChoosingStage::NotChoosing;
             }
         }
-        _ => {}
     }
 }
 
@@ -236,6 +239,7 @@ fn place_object(
                         transform: placing_res.placement.clone().unwrap(),
                         ..Default::default()
                     },
+                    LaserMirrorMarker,
                     Name::new("Component | Laser mirror"),
                 ));
             }
@@ -247,9 +251,152 @@ fn place_object(
                         transform: placing_res.placement.clone().unwrap(),
                         ..Default::default()
                     },
+                    LaserPointerMarker { first_ray: None },
                     Name::new("Component | Laser pointer"),
                 ));
             }
         }
     }
+}
+
+fn put_laser(
+    mut commands: Commands,
+    changed_pointers: Query<
+        (Entity, &Transform, &LaserPointerMarker),
+        Or<(Changed<Transform>, Added<Transform>)>,
+    >,
+    rapier_context: Res<RapierContext>,
+    all_lasers: Query<(Entity, &LaserRayData)>,
+    mut material_server: ResMut<Assets<StandardMaterial>>,
+    mut mesh_server: ResMut<Assets<Mesh>>,
+) {
+    for changed_pointer in changed_pointers.iter() {
+        if let Some(first_old_ray) = changed_pointer.2.first_ray {
+            let first_ray_cmds = commands.entity(first_old_ray);
+            let Ok((first_ray_delete, mut next_laser_ray)) =
+                all_lasers.get(first_old_ray) else {
+                    panic!();
+                };
+            commands.entity(first_ray_delete).despawn_recursive();
+
+            while let Some(b) = next_laser_ray.nextlink {
+                let Ok(next_laser) = all_lasers.get(b) else {return;};
+                commands.entity(next_laser.0).despawn_recursive();
+                next_laser_ray = next_laser.1;
+            }
+        }
+
+        // add
+
+        let mut t = changed_pointer.1.clone();
+        t.rotate_local_z(std::f32::consts::FRAC_PI_2);
+        t.translation.y += 1.53;
+        let mut gen: u16 = 0;
+        let mut prev_mirror = None;
+
+        loop {
+            let mut queryfilter =
+                QueryFilter::new().groups(CollisionGroups::new(Group::ALL, Group::GROUP_31));
+
+            queryfilter.exclude_collider = prev_mirror;
+            queryfilter.exclude_rigid_body = prev_mirror;
+
+            let (mirror_entity, toi, intersection, normal) = match rapier_context
+                .cast_ray_and_get_normal(t.translation, t.up(), 10000., true, queryfilter)
+            {
+                Some((e, t)) => (Some(e), t.toi, Some(t.point), Some(t.normal)),
+                None => (None, 10000.0, None, None),
+            };
+
+            t.translation += t.up() * (toi) / 2.;
+
+            //spawning first ray
+
+            let mut prev_ray = commands
+                .spawn(LaserRayBundle {
+                    data: LaserRayData { nextlink: None },
+                    mat: material_server.add(Color::RED.into()),
+                    mesh: mesh_server.add(
+                        bevy::prelude::shape::Cylinder {
+                            radius: 0.02,
+                            height: toi,
+                            resolution: 8,
+                            segments: 8,
+                        }
+                        .into(),
+                    ),
+                    sp: SpatialBundle::from_transform(t),
+                    name: Name::new("Laser Ray"),
+                })
+                .id();
+
+            // screen_print!("    ");
+            println!("Laser segment entity id: {:?}, height: {},", prev_ray, toi);
+
+            let (Some(intersection), Some(normal)) = (intersection,normal) else {
+                break;
+            };
+
+            // let angle = normal
+            //     .dot(t.down())
+            //     .div(
+            //         normal
+            //             .length_squared()
+            //             .mul(t.down().length_squared())
+            //             .sqrt(),
+            //     )
+            //     .acos();
+            let angle = t
+                .down()
+                .cross(normal)
+                .dot(Vec3::Y)
+                .atan2(t.down().dot(normal));
+            println!("Next laser. {:?}", angle * 2.);
+
+            if angle.abs() < std::f32::consts::FRAC_PI_2 / 13.0 {
+                break;
+            }
+
+            t = Transform {
+                translation: intersection,
+                scale: Vec3::new(1.0, 1.0, 1.0),
+                rotation: Quat::from_rotation_arc(normal, Vec3::NEG_Y),
+            };
+            t.rotate_y(angle);
+            if gen >= 1000 {
+                break;
+            }
+            gen += 1;
+            prev_mirror = mirror_entity;
+        }
+    }
+}
+
+#[derive(Component)]
+struct LaserPointerMarker {
+    first_ray: Option<Entity>,
+}
+
+#[derive(Component)]
+struct LaserMirrorMarker;
+
+enum LinkType {
+    LaserPointer(Entity),
+    LaserRay(Entity),
+    None,
+}
+
+#[derive(Component)]
+struct LaserRayData {
+    /// previous entity (laser pointer or ray segment)
+    nextlink: Option<Entity>,
+}
+
+#[derive(Bundle)]
+struct LaserRayBundle {
+    data: LaserRayData,
+    mesh: Handle<Mesh>,
+    sp: SpatialBundle,
+    mat: Handle<StandardMaterial>,
+    name: Name,
 }

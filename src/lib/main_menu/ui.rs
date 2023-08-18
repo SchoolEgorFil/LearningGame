@@ -10,7 +10,7 @@ use bevy::{
     time::Time,
     ui::{
         AlignItems, BackgroundColor, FlexDirection, Interaction, JustifyContent, PositionType,
-        Size, Style, UiRect, Val,
+        Style, UiRect, Val,
     },
 };
 
@@ -34,19 +34,19 @@ pub fn button_interactivity(
     mut next_state: ResMut<NextState<AppState>>,
     time: Res<Time>,
 ) {
-    if state.0 == AppState::MainMenu {
+    if state.get() == &AppState::MainMenu {
         for (interaction, mut color, button_marker) in &mut button_interaction {
             match (&button_marker.0, *interaction) {
-                (MainMenuButtonEnum::start_game, Interaction::Clicked) => {
+                (MainMenuButtonEnum::StartGame, Interaction::Pressed) => {
                     main_menu_res.to_game.started = true;
                 }
-                (MainMenuButtonEnum::settings, Interaction::Clicked) => {
+                (MainMenuButtonEnum::Settings, Interaction::Pressed) => {
                     main_menu_res.to_settings.started = true;
                 }
                 _ => {}
             }
             match *interaction {
-                Interaction::Clicked => {
+                Interaction::Pressed => {
                     *color = colors::button::DEFAULT_BG_ACTIVE.into();
                 }
                 Interaction::Hovered => {
@@ -64,8 +64,7 @@ pub fn button_interactivity(
             }
 
             roots.for_each_mut(|mut p| {
-                p.position.top =
-                    Val::Percent(0. - main_menu_res.to_game.ease_in_out().unwrap() * 100.)
+                p.top = Val::Percent(0. - main_menu_res.to_game.ease_in_out().unwrap() * 100.)
             });
         }
         if main_menu_res.to_settings.started {
@@ -73,8 +72,7 @@ pub fn button_interactivity(
                 main_menu_res.to_settings.tick(time.delta());
             }
             roots.for_each_mut(|mut p| {
-                p.position.left =
-                    Val::Percent(0. - main_menu_res.to_settings.ease_in().unwrap() * 100.)
+                p.left = Val::Percent(0. - main_menu_res.to_settings.ease_in().unwrap() * 100.)
             });
         }
     }
@@ -93,7 +91,8 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
     commands
         .spawn(NodeBundle {
             style: Style {
-                size: Size::all(Val::Percent(100.)),
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
                 padding: UiRect::horizontal(Val::Percent(20.)),
                 flex_direction: FlexDirection::Column,
                 justify_content: JustifyContent::SpaceEvenly,
@@ -110,7 +109,7 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
             parent
                 .spawn(ButtonBundle {
                     style: Style {
-                        size: Size::height(Val::Px(200.0)),
+                        height: Val::Px(200.0),
                         border: bevy::ui::UiRect::all(Val::Px(2.0)),
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
@@ -121,7 +120,7 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                     // background_color: Color::rgb(0.65,0.65,0.65).into(),
                     ..Default::default()
                 })
-                .insert(MainMenuButtonMarker(MainMenuButtonEnum::start_game))
+                .insert(MainMenuButtonMarker(MainMenuButtonEnum::StartGame))
                 .with_children(|p| {
                     p.spawn(TextBundle::from_section(
                         "Start",
@@ -136,7 +135,7 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
             parent
                 .spawn(ButtonBundle {
                     style: Style {
-                        size: Size::height(Val::Px(200.0)),
+                        height: Val::Px(200.0),
                         border: bevy::ui::UiRect::all(Val::Px(2.0)),
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
@@ -144,7 +143,7 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                     },
                     ..Default::default()
                 })
-                .insert(MainMenuButtonMarker(MainMenuButtonEnum::settings))
+                .insert(MainMenuButtonMarker(MainMenuButtonEnum::Settings))
                 .with_children(|p| {
                     p.spawn(TextBundle::from_section(
                         "Settings",
@@ -160,7 +159,8 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
     commands
         .spawn(NodeBundle {
             style: Style {
-                size: Size::all(Val::Percent(100.)),
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
                 padding: UiRect::horizontal(Val::Percent(20.)),
                 flex_direction: FlexDirection::Column,
                 justify_content: JustifyContent::SpaceEvenly,

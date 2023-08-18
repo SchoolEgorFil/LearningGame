@@ -1,11 +1,17 @@
 use bevy::core::Name;
+use bevy::core_pipeline::bloom::BloomSettings;
+use bevy::core_pipeline::experimental::taa::TemporalAntiAliasBundle;
+use bevy::core_pipeline::tonemapping::{DebandDither, Tonemapping};
+use bevy::core_pipeline::Skybox;
+use bevy::pbr::ScreenSpaceAmbientOcclusionBundle;
+use bevy::prelude::AmbientLight;
 use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
     prelude::{
         shape::{self, Quad},
         AssetServer, Assets, BuildChildren, Camera, Camera2d, Camera2dBundle, Camera3d,
         Camera3dBundle, Color, Commands, Entity, EnvironmentMapLight, EventReader, Image, Mesh,
-        Query, ResMut, Transform, UiCameraConfig, Vec2, Vec3, With,
+        Query, ResMut, Transform, Vec2, Vec3, With,
     },
     render::{
         camera::RenderTarget,
@@ -45,6 +51,8 @@ pub fn setup(
         return;
     }
 
+    let ev = camera_ev_r.iter().next();
+
     // This assumes we only have a single window
     let window = windows_q.single();
 
@@ -74,39 +82,49 @@ pub fn setup(
         images_a.add(image)
     };
 
+    let mut id = Entity::PLACEHOLDER;
+
     {
         // Cameras
         commands.entity(container).with_children(|p| {
-            p.spawn((
-                markers::PlayerCamera,
-                markers::PlayerMainCamera,
-                Camera3dBundle {
-                    camera: Camera {
-                        target: RenderTarget::Window(bevy::window::WindowRef::Primary),
-                        hdr: true,
-                        ..Default::default()
-                    },
-                    projection: bevy::prelude::Projection::Perspective(
-                        bevy::prelude::PerspectiveProjection {
-                            fov: std::f32::consts::FRAC_PI_2,
+            id = p
+                .spawn((
+                    markers::PlayerCamera,
+                    markers::PlayerMainCamera,
+                    Camera3dBundle {
+                        camera: Camera {
+                            target: RenderTarget::Window(bevy::window::WindowRef::Primary),
+                            hdr: true,
                             ..Default::default()
                         },
-                    ),
-                    camera_3d: Camera3d {
-                        clear_color: ClearColorConfig::Custom(Color::BLACK),
+                        projection: bevy::prelude::Projection::Perspective(
+                            bevy::prelude::PerspectiveProjection {
+                                fov: std::f32::consts::FRAC_PI_2,
+                                ..Default::default()
+                            },
+                        ),
+                        camera_3d: Camera3d {
+                            clear_color: ClearColorConfig::Custom(Color::BLACK),
+                            ..Default::default()
+                        },
+                        tonemapping: Tonemapping::ReinhardLuminance,
+                        dither: DebandDither::Enabled,
                         ..Default::default()
                     },
-                    ..Default::default()
-                },
-                EnvironmentMapLight {
-                    diffuse_map: asset_server
-                        .load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
-                    specular_map: asset_server
-                        .load("environment_maps/pisa_specular_rbg9e5_zstd.ktx2"),
-                },
-                // UiCameraConfig { show_ui: false },
-                // RenderLayers::layer(1),
-            ));
+                    EnvironmentMapLight {
+                        diffuse_map: asset_server
+                            .load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
+                        specular_map: asset_server
+                            .load("environment_maps/pisa_specular_rbg9e5_zstd.ktx2"),
+                    },
+                    BloomSettings {
+                        ..Default::default()
+                    },
+                    ScreenSpaceAmbientOcclusionBundle::default(),
+                    // TemporalAntiAliasBundle::default(), // UiCameraConfig { show_ui: false },
+                    // RenderLayers::layer(1),
+                ))
+                .id();
 
             // p.spawn((
             //     markers::PlayerCamera,
@@ -140,6 +158,25 @@ pub fn setup(
             // ));
         });
     }
+    if let Some(spawnP) = ev {
+        if let Some(amb) = spawnP.camera_params.0 {
+            commands.insert_resource(AmbientLight {
+                brightness: amb.0,
+                color: amb.1,
+            });
+        }
+        if let Some(sky) = &spawnP.camera_params.1 {
+            let lx = asset_server.load(sky);
+            commands.entity(id).insert((
+                Skybox(lx.clone()),
+                EnvironmentMapLight {
+                    diffuse_map: lx.clone(),
+                    specular_map: lx.clone(), //todo lol
+                },
+            ));
+        }
+    }
+
     return;
     {
         // First pass

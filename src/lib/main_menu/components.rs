@@ -12,9 +12,9 @@ pub struct MainMenuResource {
 }
 
 pub enum MainMenuButtonEnum {
-    start_game,
-    settings,
-    exit,
+    StartGame,
+    Settings,
+    Exit,
 }
 
 #[derive(Component)]

@@ -22,7 +22,7 @@ pub fn unlock_cursor(
 ) {
     if key.just_pressed(KeyCode::Escape) {
         let mut window = windows.single_mut();
-        window.cursor.grab_mode = CursorGrabMode::None;
+        window.cursor.grab_mode = CursorGrabMode::Confined;
         window.cursor.visible = true;
     }
 }
