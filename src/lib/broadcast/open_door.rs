@@ -33,7 +33,7 @@ impl Default for OpenDoorAction {
     fn default() -> Self {
         OpenDoorAction {
             startup: false,
-            name: "NAME_NOT_SPECIFIED".into(),
+            name: "open_door".into(),
             is_opened: false,
             opening_strategy: DoorOpenStrategy::Player,
             hint: Arc::new("Open door".into()),

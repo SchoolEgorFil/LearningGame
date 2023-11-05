@@ -1,6 +1,6 @@
 use bevy::core::Name;
-use bevy::core_pipeline::Skybox;
-use bevy::prelude::{AmbientLight, AssetServer, EnvironmentMapLight};
+// use bevy::core_pipeline::Skybox;
+// use bevy::prelude::{AmbientLight, AssetServer, EnvironmentMapLight};
 use bevy::{
     prelude::{
         BuildChildren, Commands, Entity, EventReader, EventWriter, GlobalTransform, Input, KeyCode,
@@ -15,7 +15,9 @@ use bevy_rapier3d::prelude::{
 
 use crate::lib::tools::{collision_groups, events, markers};
 
-use super::components::{JumpableCharacter, PlayerBundle, PlayerCameraContainerBundle};
+use super::components::{
+    JumpableCharacter, PlayerBundle, PlayerCameraContainerBundle, PlayerResource,
+};
 
 use bevy::input::mouse::MouseMotion;
 
@@ -29,7 +31,7 @@ pub fn add_player(
     }
     let Some(x) = player_ev_r.iter().next() else {panic!()};
 
-    commands
+    let id = commands
         .spawn(PlayerBundle {
             marker: markers::PlayerParentMarker,
             sp: SpatialBundle::from_transform(x.transform),
@@ -77,7 +79,10 @@ pub fn add_player(
                 )),
                 name: Name::new("Player container for all cameras"),
             });
-        });
+        })
+        .id();
+
+    commands.insert_resource(PlayerResource { player_entity: id });
 
     camera_ev_w.send(events::SpawnPlayerCamera {
         camera_params: x.camera_params.clone(),

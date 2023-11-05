@@ -24,7 +24,7 @@ impl Default for BallFalling01Action {
     fn default() -> Self {
         BallFalling01Action {
             startup: false,
-            name: "NAME_NOT_SPECIFIED".into(),
+            name: "ball_falling_01".into(),
             hint: Arc::new("Open door".into()),
             cell_entity: Entity::PLACEHOLDER,
             ball: Entity::PLACEHOLDER,

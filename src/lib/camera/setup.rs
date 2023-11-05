@@ -84,6 +84,26 @@ pub fn setup(
 
     let mut id = Entity::PLACEHOLDER;
 
+    let mut clear_color = Color::BLACK;
+    if let Some(spawnP) = ev {
+        if let Some(amb) = spawnP.camera_params.0 {
+            clear_color = amb.1;
+            commands.insert_resource(AmbientLight {
+                brightness: amb.0,
+                color: amb.1,
+            });
+        }
+        if let Some(sky) = &spawnP.camera_params.1 {
+            let lx = asset_server.load(sky);
+            commands.entity(id).insert((
+                Skybox(lx.clone()),
+                EnvironmentMapLight {
+                    diffuse_map: lx.clone(),
+                    specular_map: lx.clone(), //todo lol
+                },
+            ));
+        }
+    }
     {
         // Cameras
         commands.entity(container).with_children(|p| {
@@ -100,27 +120,28 @@ pub fn setup(
                         projection: bevy::prelude::Projection::Perspective(
                             bevy::prelude::PerspectiveProjection {
                                 fov: std::f32::consts::FRAC_PI_2,
+				far: 20.,
                                 ..Default::default()
                             },
                         ),
                         camera_3d: Camera3d {
-                            clear_color: ClearColorConfig::Custom(Color::BLACK),
+                            clear_color: ClearColorConfig::Custom(clear_color),
                             ..Default::default()
                         },
                         tonemapping: Tonemapping::ReinhardLuminance,
                         dither: DebandDither::Enabled,
                         ..Default::default()
                     },
-                    EnvironmentMapLight {
-                        diffuse_map: asset_server
-                            .load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
-                        specular_map: asset_server
-                            .load("environment_maps/pisa_specular_rbg9e5_zstd.ktx2"),
-                    },
-                    BloomSettings {
-                        ..Default::default()
-                    },
-                    ScreenSpaceAmbientOcclusionBundle::default(),
+                    // EnvironmentMapLight {
+                    //     diffuse_map: asset_server
+                    //         .load("environment_maps/pisa_diffuse_rgb9e5_zstd.ktx2"),
+                    //     specular_map: asset_server
+                    //         .load("environment_maps/pisa_specular_rbg9e5_zstd.ktx2"),
+                    // },
+                     BloomSettings {
+                         ..Default::default()
+                     },
+                     ScreenSpaceAmbientOcclusionBundle::default(),
                     // TemporalAntiAliasBundle::default(), // UiCameraConfig { show_ui: false },
                     // RenderLayers::layer(1),
                 ))
@@ -157,24 +178,6 @@ pub fn setup(
             //     // RenderLayers::layer(1),
             // ));
         });
-    }
-    if let Some(spawnP) = ev {
-        if let Some(amb) = spawnP.camera_params.0 {
-            commands.insert_resource(AmbientLight {
-                brightness: amb.0,
-                color: amb.1,
-            });
-        }
-        if let Some(sky) = &spawnP.camera_params.1 {
-            let lx = asset_server.load(sky);
-            commands.entity(id).insert((
-                Skybox(lx.clone()),
-                EnvironmentMapLight {
-                    diffuse_map: lx.clone(),
-                    specular_map: lx.clone(), //todo lol
-                },
-            ));
-        }
     }
 
     return;
