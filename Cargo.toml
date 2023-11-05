@@ -11,10 +11,11 @@ bevy_rapier3d = {version="0.22.0", features = ["debug-render-3d", "simd-stable"]
 bevy_kira_audio = "0.16"
 bevy-debug-text-overlay = "6.0.0"
 serde_json = "1.0.0"
+webbrowser = "0.8"
 
 
 [dependencies.bevy]
-version = "0.11"
+version = "0.11.3"
 default-features = false
 features = [
   # These are the default features:
@@ -38,7 +39,6 @@ features = [
   "bevy_ui",            # UI toolkit
   "animation",          # Animation support
   "tonemapping_luts",   # Support different camera Tonemapping modes (embeds extra data)
-  "filesystem_watcher", # Asset hot-reloading
   # "x11",                # Linux: Support X11 windowing system
   # "android_shared_stdcxx", # For Android builds, use shared C++ library
 
@@ -47,7 +47,8 @@ features = [
   "hdr",    # HDR images
   "ktx2",   # Preferred format for GPU textures
   "zstd",   # ZSTD compression support in KTX2 files
-  # "vorbis", # Audio: OGG Vorbis
+  "zlib",
+  "vorbis", # Audio: OGG Vorbis
 
   # These are other features that may be of interest:
   # (add any of these that you need)
@@ -65,15 +66,15 @@ features = [
   # "bmp",  # Uncompressed BMP image format
   # "tga",  # Truevision Targa image format
   # "exr",  # OpenEXR advanced image format
-  # "basis-universal", # Basis Universal GPU texture compression format
+  "basis-universal", # Basis Universal GPU texture compression format
   # "flac", # Audio: FLAC lossless format
   # "mp3",  # Audio: MP3 format (not recommended)
-  # "wav",  # Audio: Uncompressed WAV
+  "wav",  # Audio: Uncompressed WAV
   # "symphonia-all", # All Audio formats supported by the Symphonia library
 
   # Development/Debug features:
-  "dynamic_linking", # Dynamic linking for faster compile-times
-  "trace",           # Enable tracing for performance measurement
+  # "dynamic_linking", # Dynamic linking for faster compile-times
+  # "trace",           # Enable tracing for performance measurement
   # "detailed_trace",  # Make traces more verbose
   # "trace_tracy",     # Tracing using `tracy`
   # "trace_chrome",    # Tracing using the Chrome format
@@ -87,6 +88,9 @@ opt-level = 3
 [profile.dev]
 opt-level = 1
 
+[profile.release.package."*"]
+opt-level = 3
+
 [profile.release]
-codegen-units = 1
+codegen-units = 16
 lto = "thin"

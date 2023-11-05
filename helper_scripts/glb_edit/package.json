@@ -1,0 +1,12 @@
+{
+  "name": "glb_edit",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@gltf-transform/core": "^3.5.1",
+    "@gltf-transform/extensions": "^3.5.1",
+    "@gltf-transform/functions": "^3.5.1",
+    "sharp": "^0.32.5"
+  }
+}

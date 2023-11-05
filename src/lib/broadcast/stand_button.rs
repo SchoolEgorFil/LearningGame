@@ -38,7 +38,7 @@ impl Default for StandButtonAction {
     fn default() -> Self {
         StandButtonAction {
             startup: false,
-            name: "NAME_NOT_SPECIFIED".into(),
+            name: "stand_button".into(),
             hint: Arc::new("Press button".into()),
             can_be_pressed: true,
             button_entity: Entity::PLACEHOLDER,

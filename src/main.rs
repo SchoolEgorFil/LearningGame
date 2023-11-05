@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::{
     diagnostic::FrameTimeDiagnosticsPlugin,
     gltf::GltfPlugin,
@@ -7,6 +5,7 @@ use bevy::{
     prelude::*,
     render::{settings::WgpuFeatures, RenderPlugin},
 };
+use std::time::Duration;
 
 pub mod lib;
 
@@ -28,19 +27,18 @@ fn main() {
 
     App::new()
         .add_plugins(
-            DefaultPlugins
-                .set(AssetPlugin {
-                    watch_for_changes: Some(bevy::asset::ChangeWatcher {
-                        delay: Duration::from_millis(200),
-                    }),
-                    ..Default::default()
-                })
-                .set(RenderPlugin {
-                    wgpu_settings: bevy::render::settings::WgpuSettings {
-                        features: WgpuFeatures::TEXTURE_COMPRESSION_BC,
-                        ..Default::default()
-                    },
-                }),
+            DefaultPlugins, // .set(AssetPlugin {
+                            // watch_for_changes: Some(bevy::asset::ChangeWatcher {
+                            //     delay: Duration::from_millis(200),
+                            // }),
+                            // ..Default::default()
+                            // })
+                            // .set(RenderPlugin {
+                            // wgpu_settings: bevy::render::settings::WgpuSettings {
+                            //     features: WgpuFeatures::TEXTURE_COMPRESSION_BC,
+                            //     ..Default::default()
+                            // },
+                            // }),
         )
         .add_plugins(AudioPlugin)
         .add_plugins(OverlayPlugin {

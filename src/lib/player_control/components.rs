@@ -1,4 +1,4 @@
-use bevy::prelude::Name;
+use bevy::prelude::{Entity, Name, Resource};
 use bevy::{
     prelude::{Bundle, Component, SpatialBundle},
     utils::Instant,
@@ -67,4 +67,9 @@ pub struct PlayerCameraContainerBundle {
 
     pub sp: SpatialBundle,
     pub name: Name,
+}
+
+#[derive(Resource)]
+pub struct PlayerResource {
+    pub player_entity: Entity,
 }

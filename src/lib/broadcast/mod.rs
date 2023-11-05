@@ -5,8 +5,15 @@ use bevy::{
 use serde_json::Value;
 
 pub mod ball_falling_01;
+pub mod collision_audio;
+pub mod collision_button;
+pub mod teleport;
+pub mod link_opener;
+pub mod explosion_test_01;
 pub mod open_door;
 pub mod stand_button;
+pub mod one_animation;
+pub mod delay;
 
 pub struct ManagerPlugin {}
 

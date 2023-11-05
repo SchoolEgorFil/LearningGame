@@ -27,7 +27,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::{
     Collider, ColliderMassProperties, CollisionGroups, Group, RapierConfiguration, RapierContext,
-    Real, RigidBody, Sensor, Sleeping, TimestepMode, Velocity,
+    RigidBody, Sensor, Sleeping, TimestepMode, Velocity,
 };
 use serde_json::Value;
 
@@ -52,6 +52,7 @@ pub enum ColliderType {
 ///
 /// mesh_collider_marker
 ///     | collider_type = "tris" | "hull" | "decomposition" | "ball" | "cuboid" | "cone" | "height_map" | "from_mesh_convex"
+///	| density = f64
 ///
 /// rigidbody: "Dynamic" | "Fixed" | "KPB" | "KVB"
 ///
@@ -96,8 +97,18 @@ pub enum ColliderType {
 /// ::open_door#
 ///
 ///
+/// action:collision_audio = string
+/// #collision_audio_volume = f64
+/// #collision_audio_cooldown = f64
 ///
-///
+/// action:delayed_teleport = u64
+/// #teleport_delay = f64
+/// #teleport_destination_absolute = [f32;3]
+/// #teleport_destination_relative = [f32;3]
+/// #teleport_destination_entity = Name (string)
+/// 
+/// 
+/// action:collision_button = u64
 ///
 enum CustomProps {
     // todo!() why names of object are included?
@@ -268,22 +279,59 @@ impl CustomProps {
         if a.get(0) == Some(&&"action") && a.get(1).is_some() && a.get(2).is_none() {
             match a[1] {
                 "open_door" => {
-                    let mut a = broadcast::open_door::OpenDoorAction::new(value.clone(), &main);
-                    a.change_name("open_door".into());
+                    let  a = broadcast::open_door::OpenDoorAction::new(value.clone(), &main);
                     return CustomProps::Action(Box::new(a));
                 }
                 "ball_falling_01" => {
-                    let mut a =
+                    let a =
                         broadcast::ball_falling_01::BallFalling01Action::new(value.clone(), &main);
-                    a.change_name("ball_falling_01".into());
                     return CustomProps::Action(Box::new(a));
                 }
                 "stand_button" => {
-                    let mut a =
+                    let  a =
                         broadcast::stand_button::StandButtonAction::new(value.clone(), &main);
-                    a.change_name("stand_button".into());
                     return CustomProps::Action(Box::new(a));
                 }
+                "collision_button" => {
+                    let a =
+                        broadcast::collision_button::CollisionButtonAction::new(value.clone(), &main);
+                    return CustomProps::Action(Box::new(a));
+                }
+                "explosion_test_01" => {
+                    let  a = broadcast::explosion_test_01::ExplosionTestAction::new(
+                        value.clone(),
+                        &main,
+                    );
+                    return CustomProps::Action(Box::new(a));
+                }
+                "collision_audio" => {
+                    let  a =
+                        broadcast::collision_audio::CollisionAction::new(value.clone(), &main);
+                    return CustomProps::Action(Box::new(a));
+                }
+                "teleport" => {
+                    let  a = broadcast::teleport::DelayedTeleportAction::new(
+                        value.clone(),
+                        &main,
+                    );
+                    return CustomProps::Action(Box::new(a));
+                }
+                "one_animation" => {
+                    let  a =
+                        broadcast::one_animation::OneAnimationAction::new(value.clone(), &main);
+                    return CustomProps::Action(Box::new(a));
+                }
+                "delay_trasmitter" => {
+                    let  a = 
+                        broadcast::delay::DelayedAction::new(value.clone(), &main);
+                    return CustomProps::Action(Box::new(a));
+                }
+                "link" => {
+                    let a = 
+                        broadcast::link_opener::LinkOpenerAction::new(value.clone(), &main);
+                    return CustomProps::Action(Box::new(a));
+                }
+
                 _ => {
                     println!("ooohhh unhandled!");
                 }
@@ -298,9 +346,10 @@ pub fn gltf_adjust_light(
     mut gltf_node_q: Query<(Entity, &mut PointLight), Without<ExploredLightObjectMarker>>,
 ) {
     for mut e in gltf_node_q.iter_mut() {
-        e.1.intensity /= 170.;
+        e.1.intensity /= 720.;
         commands.entity(e.0).insert(ExploredLightObjectMarker);
         // e.1.shadows_enabled = true;
+        // e.1.range = 200.;
     }
 }
 
@@ -447,7 +496,7 @@ pub fn gltf_load_extras(
                     // commands.entity(node.0).insert(Actor(Box::new(OpenDoorAction::default())));
                 }
                 CustomProps::_Unhandled => {
-                    println!("UNHANDLED {:#?}: {:#?}", extra.0, extra.1);
+                    // println!("UNHANDLED {:#?}: {:#?}", extra.0, extra.1);
                 }
             }
         }
@@ -560,7 +609,7 @@ pub fn prepare_rapier(mut r_ctx: ResMut<RapierContext>) {
 }
 
 #[derive(Resource)]
-pub struct SceneTempRes(Handle<Gltf>);
+pub struct SceneTempRes(pub Handle<Gltf>, bool);
 
 pub fn load_scene(mut commands: Commands, asset: Res<AssetServer>) {
     commands.spawn((
@@ -569,14 +618,21 @@ pub fn load_scene(mut commands: Commands, asset: Res<AssetServer>) {
         Name::new("The thing I put just in case TM"),
     ));
 
-    let glb = asset.load("tutorial_level.glb");
+    let glb = asset.load("levels/tutorial_level/main.gltf");
 
-    commands.insert_resource(SceneTempRes(glb.clone()));
+    commands.insert_resource(SceneTempRes(glb.clone(), false));
 }
 
-pub fn spawn_gltf(mut commands: Commands, gltf: Option<Res<SceneTempRes>>, ass: Res<Assets<Gltf>>) {
-    if let Some(gltf) = gltf {
-        if let Some(gltf) = ass.get(&gltf.0) {
+pub fn spawn_gltf(
+    mut commands: Commands,
+    gltf: Option<ResMut<SceneTempRes>>,
+    ass: Res<Assets<Gltf>>,
+) {
+    if let Some(mut gltff) = gltf {
+        if gltff.1 {
+            return;
+        }
+        if let Some(gltf) = ass.get(&gltff.0) {
             commands.spawn((
                 SceneBundle {
                     scene: gltf.scenes[0].clone(),
@@ -585,7 +641,9 @@ pub fn spawn_gltf(mut commands: Commands, gltf: Option<Res<SceneTempRes>>, ass: 
                 },
                 Name::new("Main level scene"),
             ));
-            commands.remove_resource::<SceneTempRes>();
+            gltff.1 = true;
+            // gltf.named_animations
+            // commands.remove_resource::<SceneTempRes>();
         }
     }
 }

@@ -3,10 +3,10 @@ use std::time::Duration;
 use bevy::{
     prelude::{
         AssetServer, BuildChildren, Button, ButtonBundle, Camera2dBundle, Changed, Color, Commands,
-        DespawnRecursiveExt, Entity, NextState, NodeBundle, Query, Res, ResMut, State, TextBundle,
-        With,
+        Component, DespawnRecursiveExt, Entity, ImageBundle, NextState, NodeBundle, Query, Res,
+        ResMut, State, TextBundle, With,
     },
-    text::TextStyle,
+    text::{ TextStyle},
     time::Time,
     ui::{
         AlignItems, BackgroundColor, FlexDirection, Interaction, JustifyContent, PositionType,
@@ -78,6 +78,9 @@ pub fn button_interactivity(
     }
 }
 
+#[derive(Component)]
+pub struct MainMenuImageMarker;
+
 pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(Camera2dBundle::default())
@@ -88,71 +91,123 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
         to_settings: TransitionMarker::new(false, Duration::from_secs(1)),
     });
 
+    // commands.spawn(SpriteBundle {
+    //     sprite: Sprite {
+    //         ..Default::default()
+    //     },
+    //     texture: asset_server.load("splash/main_screen_sun.png"),
+    //
+    //     ..Default::default()
+    // });
+
     commands
         .spawn(NodeBundle {
             style: Style {
                 width: Val::Percent(100.),
                 height: Val::Percent(100.),
-                padding: UiRect::horizontal(Val::Percent(20.)),
+                // padding: UiRect::horizontal(Val::Percent(20.)),
                 flex_direction: FlexDirection::Column,
-                justify_content: JustifyContent::SpaceEvenly,
+                // justify_content: JustifyContent::SpaceEvenly,
+                align_items: AlignItems::Center,
                 position_type: PositionType::Absolute,
                 ..Default::default()
             },
-            background_color: colors::button::DEFAULT_BG_HOVER.into(),
+            // background_color: colors::button::DEFAULT_BG_HOVER.into(),
             ..Default::default()
         })
         .insert(RootNode)
         .insert(MainMenuMarker)
         .with_children(|parent| {
+            parent.spawn(ImageBundle {
+                image: bevy::ui::UiImage {
+                    texture: asset_server.load("splash/main_screen_sun.png"),
+                    ..Default::default()
+                },
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    min_width: Val::Vw(100.),
+                    min_height: Val::Vh(100.),
+                    width: Val::Px(0.01),
+                    height: Val::Px(0.01),
+                    aspect_ratio: Some(1920. / 1080.),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
             //button "Start"
-            parent
-                .spawn(ButtonBundle {
-                    style: Style {
-                        height: Val::Px(200.0),
-                        border: bevy::ui::UiRect::all(Val::Px(2.0)),
-                        align_items: AlignItems::Center,
-                        justify_content: JustifyContent::Center,
-
-                        ..Default::default()
-                    },
-
-                    // background_color: Color::rgb(0.65,0.65,0.65).into(),
-                    ..Default::default()
-                })
-                .insert(MainMenuButtonMarker(MainMenuButtonEnum::StartGame))
-                .with_children(|p| {
-                    p.spawn(TextBundle::from_section(
-                        "Start",
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 40.0,
-                            color: Color::rgb(0.9, 0.9, 0.9),
-                        },
-                    ));
-                });
+            let mut style = TextBundle::from_section(
+                "Фізичний офіс ідей",
+                TextStyle {
+                    font_size: 38.,
+                    color: Color::BLACK,
+                    font: asset_server.load("fonts\\FiraSans-Bold.ttf"),
+                },
+            );
+            // style.style.width = Val::Percent(100.);
+            // style.text.alignment = TextAlignment::Center;
+            // style.style.align_items = AlignItems::Center;
+            style.style.margin = UiRect::vertical(Val::Px(90.));
+            parent.spawn(style);
 
             parent
-                .spawn(ButtonBundle {
+                .spawn(NodeBundle {
                     style: Style {
-                        height: Val::Px(200.0),
-                        border: bevy::ui::UiRect::all(Val::Px(2.0)),
-                        align_items: AlignItems::Center,
-                        justify_content: JustifyContent::Center,
+                        width: Val::Percent(100.),
+                        // height: Val::Auto,
+                        align_items: AlignItems::Start,
+                        flex_direction: FlexDirection::Column,
+                        row_gap: Val::Px(20.),
+                        padding: UiRect::left(Val::Px(30.)),
                         ..Default::default()
                     },
                     ..Default::default()
                 })
-                .insert(MainMenuButtonMarker(MainMenuButtonEnum::Settings))
-                .with_children(|p| {
-                    p.spawn(TextBundle::from_section(
-                        "Settings",
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 40.0,
-                            color: Color::rgb(0.9, 0.9, 0.9),
-                        },
-                    ));
+                .with_children(|parent| {
+                    let button_style = Style {
+                        min_width: Val::Px(150.),
+                        // height: Val::Px(200.0),
+                        border: bevy::ui::UiRect::all(Val::Px(2.0)),
+                        padding: UiRect::all(Val::Px(10.)),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+
+                        ..Default::default()
+                    };
+
+                    parent
+                        .spawn(ButtonBundle {
+                            style: button_style.clone(),
+                            // background_color: Color::rgb(0.65,0.65,0.65).into(),
+                            ..Default::default()
+                        })
+                        .insert(MainMenuButtonMarker(MainMenuButtonEnum::StartGame))
+                        .with_children(|p| {
+                            p.spawn(TextBundle::from_section(
+                                "Start",
+                                TextStyle {
+                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                    font_size: 40.0,
+                                    color: Color::rgb(0.9, 0.9, 0.9),
+                                },
+                            ));
+                        });
+
+                    parent
+                        .spawn(ButtonBundle {
+                            style: button_style.clone(),
+                            ..Default::default()
+                        })
+                        .insert(MainMenuButtonMarker(MainMenuButtonEnum::Settings))
+                        .with_children(|p| {
+                            p.spawn(TextBundle::from_section(
+                                "Settings",
+                                TextStyle {
+                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                    font_size: 40.0,
+                                    color: Color::rgb(0.9, 0.9, 0.9),
+                                },
+                            ));
+                        });
                 });
         });
 
