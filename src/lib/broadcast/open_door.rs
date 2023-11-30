@@ -13,7 +13,7 @@ use serde_json::Value;
 use crate::lib::tools::{
     collision_groups,
     events::{self, ButtonState, ModifyCollisionGroup, ProposePopup},
-    markers::{PlayerCameraContainerMarker, PlayerParentMarker},
+    markers::{PlayerCameraContainerMarker, PlayerParentMarker}, consts::font_names,
 };
 
 use super::Action;
@@ -154,8 +154,9 @@ impl Action for OpenDoorAction {
                 text: self.hint.clone(),
                 priority: 1,
                 style: TextStyle {
-                    font_size: 26.0,
-                    ..Default::default()
+                    font: world.resource::<bevy::prelude::AssetServer>().load(font_names::NOTO_SANS_MEDIUM),
+                    font_size: 32.0,
+                    color: bevy::prelude::Color::WHITE,
                 },
                 key: Some(KeyCode::E),
             });

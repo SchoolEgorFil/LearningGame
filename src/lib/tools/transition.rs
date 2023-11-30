@@ -5,7 +5,6 @@ use bevy::{prelude::Component, time::Timer};
 #[derive(Component)]
 pub struct TransitionMarker {
     pub started: bool,
-    pub reverse: bool, //for two-way transitions
     pub timer: Timer,
 }
 
@@ -13,7 +12,6 @@ impl TransitionMarker {
     pub fn new(start: bool, time: Duration) -> TransitionMarker {
         TransitionMarker {
             started: start,
-            reverse: false,
             timer: Timer::new(time, bevy::time::TimerMode::Once),
         }
     }

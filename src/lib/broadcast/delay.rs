@@ -7,13 +7,13 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::RapierContext;
 
-use crate::lib::{player_control::components::PlayerResource, tools::events::ButtonState};
+use crate::lib::{tools::events::ButtonState};
 
 use super::Action;
 
 pub struct DelayedAction {
     // pub is_started: bool,
-    pub start_time: Option<Instant>,
+    pub start_time: Option<Duration>,
     pub duration: Duration,
     pub from_id: u64,
     pub to_id: u64,
@@ -79,9 +79,9 @@ impl Action for DelayedAction {
             && world
                 .get_resource::<Time>()
                 .unwrap()
-                .last_update()
-                .unwrap()
-                .duration_since(self.start_time.unwrap())
+                .elapsed()
+                -
+                self.start_time.unwrap()
                 > self.duration
         {
             self.start_time = None;
@@ -92,7 +92,7 @@ impl Action for DelayedAction {
 
         let a = world.get_resource::<Events<ButtonState>>().unwrap();
         let mut b = a.get_reader();
-        if let Some(a) = b.iter(a).find(|&p| p.id == self.from_id) {
+        if let Some(a) = b.read(a).find(|&p| p.id == self.from_id) {
             if self.start_time.is_none() {
                 println!("{:?} |  {:?}", self.only_edge, a.just_changed);
                 if self.only_edge && !a.just_changed {
@@ -101,7 +101,10 @@ impl Action for DelayedAction {
 
                 println!("Delay started");
 
-                self.start_time = Some(Instant::now());
+                self.start_time = Some(world
+                    .get_resource::<Time>()
+                    .unwrap()
+                    .elapsed());
                 self.button_state = Some(ButtonState {
                     id: self.to_id,
                     is_pressed: a.is_pressed,

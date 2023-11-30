@@ -18,7 +18,7 @@ pub struct CollisionAction {
     audio: Handle<AudioSource>,
     pub volume: f32,
     pub recursive_cooldown: Option<Duration>,
-    pub last_played: Option<Instant>,
+    pub last_played: Option<Duration>,
     pub was_colliding: bool,
     pub is_startupped: bool,
     pub additional_info: Option<Box<(String, Option<f64>, Option<f64>)>>,
@@ -82,10 +82,10 @@ impl Action for CollisionAction {
                         world
                             .get_resource::<Time>()
                             .unwrap()
-                            .last_update()
-                            .unwrap()
-                            .duration_since(self.last_played.unwrap())
-                            > cooldown
+                            .elapsed_seconds_f64()
+                            - 
+                            self.last_played.unwrap().as_secs_f64()
+                            > cooldown.as_secs_f64()
                     })))
             {
                 world
@@ -93,7 +93,7 @@ impl Action for CollisionAction {
                     .unwrap()
                     .play(self.audio.clone());
             }
-            self.last_played = Some(world.get_resource::<Time>().unwrap().last_update().unwrap());
+            self.last_played = Some(world.get_resource::<Time>().unwrap().elapsed());
         }
         false
     }

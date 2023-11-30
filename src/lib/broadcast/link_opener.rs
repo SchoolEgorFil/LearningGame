@@ -13,7 +13,7 @@ use serde_json::Value;
 use crate::lib::tools::{
     collision_groups,
     events::{self, ButtonState, ModifyCollisionGroup, ProposePopup},
-    markers::{PlayerCameraContainerMarker, PlayerParentMarker},
+    markers::{PlayerCameraContainerMarker, PlayerParentMarker}, consts::font_names,
 };
 
 use super::Action;
@@ -32,7 +32,7 @@ impl Default for LinkOpenerAction {
             startup: false,
             name: "link_opener".into(),
             link: Arc::new("".into()),
-            hint: Arc::new("Press E".into()),
+            hint: Arc::new("Натисність E".into()),
             me: Entity::PLACEHOLDER
         }
     }
@@ -45,7 +45,7 @@ impl Action for LinkOpenerAction {
             startup: false,
             name: "link_opener".into(),
             link: Arc::new(link.to_string()),
-            hint: Arc::new("Press E".into()),
+            hint: Arc::new("Натисніть E".into()),
             me: Entity::PLACEHOLDER
         }
     }
@@ -114,8 +114,9 @@ impl Action for LinkOpenerAction {
             text: self.hint.clone(),
             priority: 1,
             style: TextStyle {
-                font_size: 26.0,
-                ..Default::default()
+                font: world.resource::<bevy::prelude::AssetServer>().load(font_names::NOTO_SANS_MEDIUM),
+                font_size: 32.0,
+                color: bevy::prelude::Color::WHITE,
             },
             key: Some(KeyCode::E),
         });

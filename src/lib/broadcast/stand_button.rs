@@ -14,7 +14,7 @@ use serde_json::Value;
 use crate::lib::tools::{
     collision_groups,
     events::{self, ButtonState, ModifyCollisionGroup, ProposePopup},
-    markers::{PlayerCameraContainerMarker, PlayerParentMarker},
+    markers::{PlayerCameraContainerMarker, PlayerParentMarker}, consts::font_names,
 };
 
 use super::Action;
@@ -22,7 +22,7 @@ use super::Action;
 pub struct StandButtonAction {
     pub startup: bool,
     pub name: String,
-    pub when_pressed: Option<Instant>,
+    pub when_pressed: Option<Duration>,
     pub is_pressed: bool,
     pub cooldown: Duration,
     pub can_be_pressed: bool,
@@ -106,9 +106,8 @@ impl Action for StandButtonAction {
             && world
                 .get_resource::<Time>()
                 .unwrap()
-                .last_update()
-                .unwrap()
-                .duration_since(self.when_pressed.unwrap())
+                .elapsed() -
+                self.when_pressed.unwrap()
                 > self.press_longetivity
         {
             // println!("eveveveveve");
@@ -155,9 +154,8 @@ impl Action for StandButtonAction {
             && (world
                 .get_resource::<Time>()
                 .unwrap()
-                .last_update()
-                .unwrap()
-                .duration_since(self.when_pressed.unwrap())
+                .elapsed() -
+                self.when_pressed.unwrap()
                 < self.cooldown
                 || self.cooldown.is_zero())
         {
@@ -168,8 +166,9 @@ impl Action for StandButtonAction {
             text: self.hint.clone(),
             priority: 1,
             style: TextStyle {
-                font_size: 26.0,
-                ..Default::default()
+                font: world.resource::<bevy::prelude::AssetServer>().load(font_names::NOTO_SANS_MEDIUM),
+                font_size: 32.0,
+                color: bevy::prelude::Color::WHITE,
             },
             key: Some(KeyCode::E),
         });
@@ -192,7 +191,7 @@ impl Action for StandButtonAction {
             just_changed: true,
         });
 
-        self.when_pressed = world.get_resource::<Time>().unwrap().last_update();
+        self.when_pressed = Some(world.get_resource::<Time>().unwrap().elapsed());
         self.is_pressed = true;
 
         true //:D

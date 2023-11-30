@@ -4,7 +4,7 @@ use bevy::{
 
 use serde_json::Value;
 
-use crate::lib::{player_control::components::PlayerResource, tools::events::ButtonState};
+use crate::lib::{tools::{events::ButtonState, resources::PlayerResource}};
 
 use super::Action;
 

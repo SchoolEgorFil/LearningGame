@@ -3,7 +3,7 @@ use bevy::{
     sprite::Material2dPlugin,
 };
 
-use crate::AppState;
+use crate::GameState;
 
 use self::{
     materials::{FirstPassMaterial, SecondPassMaterial, ThirdPassMaterial},
@@ -28,6 +28,6 @@ impl Plugin for GameCameraPlugin {
             Material2dPlugin::<ThirdPassMaterial>::default(),
         ))
         .insert_resource(Msaa::Off)
-        .add_systems(Update, setup.run_if(in_state(AppState::InGame)));
+        .add_systems(Update, setup.run_if(in_state(GameState::Game)));
     }
 }

@@ -13,10 +13,11 @@ use bevy_rapier3d::prelude::{
     KinematicCharacterController, LockedAxes, QueryFilter, RapierContext, RigidBody, Velocity,
 };
 
+use crate::lib::tools::resources::PlayerResource;
 use crate::lib::tools::{collision_groups, events, markers};
 
 use super::components::{
-    JumpableCharacter, PlayerBundle, PlayerCameraContainerBundle, PlayerResource,
+    JumpableCharacter, PlayerBundle, PlayerCameraContainerBundle
 };
 
 use bevy::input::mouse::MouseMotion;
@@ -63,12 +64,12 @@ pub fn add_player(
             },
             collider: Collider::capsule_y(0.75 - 0.4, 0.4),
             velocity: Velocity::zero(),
-            collision_group: unsafe {
+            collision_group: 
                 CollisionGroups::new(
-                    Group::from_bits_unchecked(collision_groups::player_collision),
-                    Group::from_bits_unchecked(collision_groups::player_collision),
+                    Group::from_bits_retain(collision_groups::player_collision),
+                    Group::from_bits_retain(collision_groups::player_collision),
                 )
-            },
+            ,
             name: Name::new("Player"),
         })
         .with_children(|p| {

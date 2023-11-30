@@ -25,9 +25,7 @@ impl Action for OneAnimationAction {
                 p.1.compatible_with(&name)
             }).and_then(|p| Some(p.0));
             if an.is_some() {
-                let handle =  a.get_handle(
-                    an.unwrap()
-                );
+                let handle =  Handle::Weak(an.unwrap());
                 self.animation = Some(handle);
             } else {
                 self.animation = None;
@@ -56,7 +54,7 @@ impl Action for OneAnimationAction {
         
         let a = world.get_resource::<Events<ButtonState>>().unwrap();
         let mut b = a.get_reader();
-        if let Some(a) = b.iter(a).find(|&p| p.id == self.id) {
+        if let Some(a) = b.read(a).find(|&p| p.id == self.id) {
             self.was_played = true;
                 return true;
         }

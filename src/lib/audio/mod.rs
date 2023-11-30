@@ -7,7 +7,7 @@ use bevy::{
 use bevy_kira_audio::{Audio, AudioControl, AudioSource};
 use bevy_rapier3d::prelude::RapierContext;
 
-use crate::AppState;
+use crate::GameState;
 
 use super::tools::markers::PlayerParentMarker;
 
@@ -17,7 +17,7 @@ impl Plugin for AudioPlayerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_systems(
             Update,
-            handle_audio_collision.run_if(in_state(AppState::InGame)),
+            handle_audio_collision.run_if(in_state(GameState::Game)),
         );
     }
 }
@@ -28,7 +28,7 @@ pub struct CollisionAudio {
     pub volume: f32,
     /// `None` means no replaying
     pub recursive_cooldown: Option<Duration>,
-    pub last_played: Option<Instant>,
+    pub last_played: Option<Duration>,
     pub was_colliding: bool,
 }
 
@@ -65,15 +65,14 @@ fn handle_audio_collision(
             if !sensor.1.was_colliding
                 && (sensor.1.last_played.is_none()
                     || (sensor.1.recursive_cooldown.is_some_and(|cooldown| {
-                        time.last_update()
-                            .unwrap()
-                            .duration_since(sensor.1.last_played.unwrap())
-                            > cooldown
+                        time.elapsed_seconds_f64()
+                            - sensor.1.last_played.unwrap().as_secs_f64()
+                            > cooldown.as_secs_f64()
                     })))
             {
                 audio.play(sensor.1.audio.clone());
             }
-            sensor.1.last_played = Some(time.last_update().unwrap());
+            sensor.1.last_played = Some(time.elapsed());
         }
     }
 }
