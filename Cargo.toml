@@ -3,82 +3,109 @@ name = "v0_2023_coursework"
 version = "0.1.0"
 edition = "2021"
 
+[patch.crates-io]
+bevy = {path = "vendor/bevy"}
+bevy_animation = {path = "vendor/bevy_animation"}
+
 [dependencies]
-# bevy = { version="0.10.1", default-deatures = false }
-bevy_editor_pls = { git = "https://github.com/jakobhellermann/bevy_editor_pls.git" }
-bevy_rapier3d = {version="0.22.0", features = ["debug-render-3d", "simd-stable"]}
+bevy_editor_pls = "0.6"
+#bevy_editor_pls = {path="dependencies/bevy_editor_pls-main"}
+bevy_rapier3d = {version="0.23.0", features = ["debug-render-3d", "simd-stable"]}
+#bevy_rapier3d = {path="dependencies/bevy_rapier-0.23.0", features = ["debug-render-3d", "simd-stable"]}
 # bevy_renet = "0.0.8"
-bevy_kira_audio = "0.16"
-bevy-debug-text-overlay = "6.0.0"
-serde_json = "1.0.0"
+bevy_kira_audio = "0.18"
+#bevy_kira_audio = {path="dependencies/bevy_kira_audio-main"}
+# bevy-debug-text-overlay = "7.0.0"
+serde_json = "*"
+serde = "*"
 webbrowser = "0.8"
 
 
 [dependencies.bevy]
-version = "0.11.3"
+version = "0.12.0"
 default-features = false
 features = [
-  # These are the default features:
-  # (re-enable whichever you like)
-  
-  "multi-threaded",
+"animation",
+"bevy_animation",
+"bevy_asset",
+
+#"bevy_audio",     
+
+"bevy_core_pipeline",
+"bevy_gilrs",
+"bevy_gizmos",
+"bevy_gltf",
+"bevy_pbr",
+"bevy_render",
+"bevy_scene",
+"bevy_sprite",
+"bevy_text",
+"bevy_ui",
+"bevy_winit",
+
+"default_font",
+
+"hdr",
+"ktx2",
+
+"multi-threaded",
+
+"png",
+
+"tonemapping_luts",
+
+"vorbis",
+
+#"webgl2",
+"x11",
+# "android_shared_stdcxx", # For Android builds, use shared C++ library
+
+# "asset_processor",
+"async-io",
+"basis-universal",
+
+##!!!!!!!!!!!!!!!!!!!!!!"bevy_dynamic_plugin"
+
+"jpeg",
+"wav",
+
+# "bmp",
+# "dds", 
+# "exr",
+# "flac",
+# "minimp3",
+# "mp3",
+# "pnm",
+# "symphonia-all",
+# "tga",
+# "webp",
+
+# "debug_glam_assert",
+# "detailed_trace",
+# "dynamic_linking",
+# "embedded_watcher",
+# "file_watcher",
+# "glam_assert",
 
 
-  # Bevy functionality:
-  "bevy_asset",         # Assets management
-  #"bevy_audio",         # Builtin audio
-  "bevy_gilrs",         # Gamepad input support
-  "bevy_scene",         # Scenes management
-  "bevy_winit",         # Window management
-  "bevy_render",        # Rendering framework core
-  "bevy_core_pipeline", # Common rendering abstractions
-  "bevy_sprite",        # 2D (sprites) rendering
-  "bevy_pbr",           # 3D (physically-based) rendering
-  "bevy_gltf",          # GLTF 3D assets format support
-  "bevy_text",          # Text/font rendering
-  "bevy_ui",            # UI toolkit
-  "animation",          # Animation support
-  "tonemapping_luts",   # Support different camera Tonemapping modes (embeds extra data)
-  # "x11",                # Linux: Support X11 windowing system
-  # "android_shared_stdcxx", # For Android builds, use shared C++ library
-
-  # File formats:
-  "png",    # PNG image format for simple 2D images
-  "hdr",    # HDR images
-  "ktx2",   # Preferred format for GPU textures
   "zstd",   # ZSTD compression support in KTX2 files
   "zlib",
-  "vorbis", # Audio: OGG Vorbis
 
-  # These are other features that may be of interest:
-  # (add any of these that you need)
+"pbr_transmission_textures",
+"serialize",
+"shader_format_glsl",
+"shader_format_spirv",
+"subpixel_glyph_atlas",
 
-  # Bevy functionality:
-  # "wayland",              # Linux: Support Wayland windowing system
-  "subpixel_glyph_atlas", # Subpixel antialiasing for text/fonts
-  "serialize",            # Support for `serde` Serialize/Deserialize
-  #####?### "bevy_dynamic_plugin",  # Support for loading of `DynamicPlugin`s
-  # "accesskit_unix",       # AccessKit integration for UI Accessibility
+# "trace",
+# "trace_chrome",
+# "trace_tracy",
+# "trace_tracy_memory",
+# "wgpu_trace",      # WGPU/rendering tracing
 
-  # File formats:
-  # "dds",  # Alternative DirectX format for GPU textures, instead of KTX2
-   "jpeg", # JPEG lossy format for 2D photos
-  # "bmp",  # Uncompressed BMP image format
-  # "tga",  # Truevision Targa image format
-  # "exr",  # OpenEXR advanced image format
-  "basis-universal", # Basis Universal GPU texture compression format
-  # "flac", # Audio: FLAC lossless format
-  # "mp3",  # Audio: MP3 format (not recommended)
-  "wav",  # Audio: Uncompressed WAV
-  # "symphonia-all", # All Audio formats supported by the Symphonia library
 
-  # Development/Debug features:
-  # "dynamic_linking", # Dynamic linking for faster compile-times
-  # "trace",           # Enable tracing for performance measurement
-  # "detailed_trace",  # Make traces more verbose
-  # "trace_tracy",     # Tracing using `tracy`
-  # "trace_chrome",    # Tracing using the Chrome format
-  # "wgpu_trace",      # WGPU/rendering tracing
+# "wayland",              # Linux: Support Wayland windowing system
+# "accesskit_unix",       # AccessKit integration for UI Accessibility
 ]
 
 

@@ -1,3 +1,7 @@
 /target
 /blender
 /krita
+/helper_scripts
+*.exe
+/vendor/*
+!/vendor/bevy_animation

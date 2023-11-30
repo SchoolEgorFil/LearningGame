@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, ffi::OsString};
 
 use bevy::{
     prelude::{Color, Entity, Event, Handle, Image, KeyCode, Transform},
@@ -6,7 +6,7 @@ use bevy::{
 };
 
 use crate::lib::{
-    placing_parts::{PlacingForm, PlacingObject},
+    // placing_parts::{PlacingForm, PlacingObject},
     scene_loading::ColliderType,
 };
 
@@ -21,11 +21,11 @@ pub struct SpawnPlayerCamera {
     pub camera_params: (Option<(f32, Color)>, Option<String>),
 }
 
-#[derive(Debug, Event)]
-pub struct PlacementEvent {
-    pub object: PlacingObject,
-    pub form: PlacingForm,
-}
+// #[derive(Debug, Event)]
+// pub struct PlacementEvent {
+//     pub object: PlacingObject,
+//     pub form: PlacingForm,
+// }
 
 #[derive(Event)]
 pub struct AttachCollider {
@@ -59,4 +59,10 @@ pub struct ButtonState {
     pub is_pressed: bool,
     pub just_changed: bool,
     pub id: u64,
+}
+
+
+#[derive(Event)]
+pub struct LoadLevel {
+    pub string: OsString
 }

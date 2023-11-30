@@ -1,19 +1,23 @@
+use std::ffi::OsString;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use super::broadcast::{self, Action, Actor};
 use super::tools::collision_groups;
-use super::tools::events::{AttachCollider, ModifyCollisionGroup};
+use super::tools::events::{AttachCollider, ModifyCollisionGroup, LoadLevel};
 use super::tools::markers::ExploredLightObjectMarker;
+use super::tools::resources::SceneTempRes;
 use super::tools::{
     events::SpawnPlayer, markers::ExploredGLTFObjectMarker, transition::TransitionMarker,
 };
 use crate::lib::audio::CollisionAudio;
-use crate::AppState;
+use crate::GameState;
 use bevy::gltf::{Gltf, GltfExtras};
 use bevy::pbr::{CascadeShadowConfigBuilder, NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::{
+    State,NextState,
     Children, DirectionalLight, DirectionalLightBundle, EventReader, IntoSystemConfigs, PointLight,
-    Resource, Update, Visibility, World,
+    Resource, Update, Visibility, World, EntityWorldMut,
 };
 use bevy::utils::HashMap;
 use bevy::{
@@ -296,14 +300,14 @@ impl CustomProps {
                     let a =
                         broadcast::collision_button::CollisionButtonAction::new(value.clone(), &main);
                     return CustomProps::Action(Box::new(a));
-                }
-                "explosion_test_01" => {
-                    let  a = broadcast::explosion_test_01::ExplosionTestAction::new(
-                        value.clone(),
-                        &main,
-                    );
-                    return CustomProps::Action(Box::new(a));
-                }
+                }   
+                // "explosion_test_01" => {
+                //     let  a = broadcast::explosion_test_01::ExplosionTestAction::new(
+                //         value.clone(),
+                //         &main,
+                //     );
+                //     return CustomProps::Action(Box::new(a));
+                // }
                 "collision_audio" => {
                     let  a =
                         broadcast::collision_audio::CollisionAction::new(value.clone(), &main);
@@ -319,6 +323,11 @@ impl CustomProps {
                 "one_animation" => {
                     let  a =
                         broadcast::one_animation::OneAnimationAction::new(value.clone(), &main);
+                    return CustomProps::Action(Box::new(a));
+                }
+                "named_animation" => {
+                    let  a =
+                        broadcast::named_animation::NamedAnimationAction::new(value.clone(), &main);
                     return CustomProps::Action(Box::new(a));
                 }
                 "delay_trasmitter" => {
@@ -480,8 +489,9 @@ pub fn gltf_load_extras(
                     // commands.entity(node.0).insert(bundle)
                 }
                 CustomProps::Action(action) => {
-                    commands.entity(node.0).add(|id, world: &mut World| {
-                        if let Some(mut actor) = world.get_mut::<Actor>(id) {
+                    commands.entity(node.0).add(|mut entity: EntityWorldMut| {
+                        
+                        if let Some(mut actor) = entity.get_mut::<Actor>() {
                             if let Some(_) = actor.0.insert(action.name(), action) {
                                 panic!();
                             }
@@ -490,7 +500,7 @@ pub fn gltf_load_extras(
                             if let Some(_) = h.insert(action.name(), action) {
                                 panic!();
                             }
-                            world.entity_mut(id).insert(Actor(h));
+                            entity.insert(Actor(h));
                         }
                     });
                     // commands.entity(node.0).insert(Actor(Box::new(OpenDoorAction::default())));
@@ -548,15 +558,15 @@ pub fn attach_collider(
                 }
                 _ => todo!(),
             };
-            unsafe {
+            
                 if collision_group_q.get(mesh.0.get()).unwrap().0.is_none() {
                     commands.entity(mesh.0.get()).insert(CollisionGroups::new(
-                        Group::from_bits_unchecked(collision_groups::player_collision),
-                        Group::from_bits_unchecked(collision_groups::player_collision),
+                        Group::from_bits_truncate(collision_groups::player_collision),
+                        Group::from_bits_truncate(collision_groups::player_collision),
                     ));
                 }
                 commands.entity(mesh.0.get()).insert(c);
-            }
+            
         }
     }
 }
@@ -583,19 +593,19 @@ pub fn attach_collision_groups(
             (e.filters.bits(), e.memberships.bits())
         };
         if ev.override_groups {
-            unsafe {
+            
                 commands.entity(ev.entity).insert(CollisionGroups {
-                    memberships: Group::from_bits_unchecked(ev.members),
-                    filters: Group::from_bits_unchecked(ev.flags),
+                    memberships: Group::from_bits_truncate(ev.members),
+                    filters: Group::from_bits_truncate(ev.flags),
                 });
-            }
+            
         } else {
-            unsafe {
+            
                 commands.entity(ev.entity).insert(CollisionGroups {
-                    memberships: Group::from_bits_unchecked(group.0 | ev.members),
-                    filters: Group::from_bits_unchecked(group.1 | ev.flags),
+                    memberships: Group::from_bits_truncate(group.0 | ev.members),
+                    filters: Group::from_bits_truncate(group.1 | ev.flags),
                 });
-            }
+            
         }
     }
 }
@@ -608,31 +618,53 @@ pub fn prepare_rapier(mut r_ctx: ResMut<RapierContext>) {
     r_ctx.integration_parameters.max_stabilization_iterations = 3;
 }
 
-#[derive(Resource)]
-pub struct SceneTempRes(pub Handle<Gltf>, bool);
 
-pub fn load_scene(mut commands: Commands, asset: Res<AssetServer>) {
-    commands.spawn((
-        LoaderMarker,
-        TransitionMarker::new(false, Duration::from_millis(400)),
-        Name::new("The thing I put just in case TM"),
-    ));
 
-    let glb = asset.load("levels/tutorial_level/main.gltf");
+pub fn load_scene(
+    mut commands: Commands, 
+    asset: Res<AssetServer>,
+    mut ev: EventReader<LoadLevel>
+) {
+    if ev.len() > 1 {
+        panic!("You should not load 2 gltfs at the same tick");
+    }
 
-    commands.insert_resource(SceneTempRes(glb.clone(), false));
+    for i in  ev.read() {
+        let mut s = PathBuf::new();
+        s = s.join("levels");
+        s = s.join(i.string.clone());
+        s = s.join("main.gltf");
+        println!("{}",s.display());
+        let glb = asset.load(s);
+        commands.insert_resource(SceneTempRes {
+            handle: glb.clone(),
+            is_loaded: false,
+            name: i.string.clone().to_string_lossy().into_owned()
+        });
+        commands.spawn((
+            LoaderMarker,
+            TransitionMarker::new(false, Duration::from_millis(400)),
+            Name::new("The thing I put just in case TM"),
+        ));
+    }
+
 }
 
 pub fn spawn_gltf(
     mut commands: Commands,
     gltf: Option<ResMut<SceneTempRes>>,
     ass: Res<Assets<Gltf>>,
+    state: Res<State<GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
     if let Some(mut gltff) = gltf {
-        if gltff.1 {
+        if gltff.is_loaded {
             return;
         }
-        if let Some(gltf) = ass.get(&gltff.0) {
+        if let Some(gltf) = ass.get(&gltff.handle) {
+            for (k,v) in gltf.named_animations.iter() {
+                println!("Action: {}", k);
+            }
             commands.spawn((
                 SceneBundle {
                     scene: gltf.scenes[0].clone(),
@@ -641,9 +673,11 @@ pub fn spawn_gltf(
                 },
                 Name::new("Main level scene"),
             ));
-            gltff.1 = true;
-            // gltf.named_animations
+            gltff.is_loaded = true;
             // commands.remove_resource::<SceneTempRes>();
+
+            next_state.0 = Some(GameState::Game);
+            // gltf.named_animations
         }
     }
 }
@@ -681,18 +715,24 @@ impl Plugin for SceneLoaderPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             // .add_systems(Startup, prepare_rapier)
-            .add_systems(OnEnter(AppState::InGame), (load_scene).chain())
+            // .add_systems(OnEnter(GameState::Game), (load_scene).chain())
             .add_systems(
                 Update,
                 (
+                    load_scene,
                     spawn_gltf,
+                )
+                    .distributive_run_if(in_state(GameState::MainMenu)),
+            ).add_systems(
+                Update,
+                (
                     update_timer,
                     // gltf_load_colliders,
                     prepare_rapier,
                     (gltf_load_extras, (attach_collider, attach_collision_groups)).chain(),
                     gltf_adjust_light,
                 )
-                    .distributive_run_if(in_state(AppState::InGame)),
+                    .distributive_run_if(in_state(GameState::Game)),
             );
     }
 }

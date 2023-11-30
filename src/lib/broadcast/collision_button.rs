@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 use bevy::{prelude::{Entity, warn}, utils::Instant};
 use bevy_rapier3d::prelude::RapierContext;
 
-use crate::lib::{player_control::components::PlayerResource, tools::events::ButtonState};
+use crate::lib::{tools::{events::ButtonState, resources::PlayerResource}};
 
 use super::Action;
 

@@ -1,6 +1,6 @@
 use bevy::prelude::{in_state, IntoSystemConfigs, Plugin, Update};
 
-use crate::AppState;
+use crate::{GameState, UiState};
 
 use self::systems::{add_player, move_camera, move_player, queue_player_jump, tackle_jump};
 
@@ -22,7 +22,8 @@ impl Plugin for PlayerPlugin {
                 move_camera,
                 (queue_player_jump, tackle_jump).chain(),
             )
-                .distributive_run_if(in_state(AppState::InGame)),
+                .distributive_run_if(in_state(GameState::Game))
+                .distributive_run_if(in_state(UiState::NotSettings)),
         );
     }
 }
