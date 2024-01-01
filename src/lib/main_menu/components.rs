@@ -19,7 +19,8 @@ pub struct ButtonColors(pub Color,pub Color, pub Color);
 pub enum MainMenuVariants {
     Main,
     Settings,
-    Levels
+    About,
+    Levels,
 }
 
 impl MainMenuVariants {
@@ -28,6 +29,7 @@ impl MainMenuVariants {
             MainMenuVariants::Main => (0.0,0.0),
             MainMenuVariants::Settings => (1.0,0.0),
             MainMenuVariants::Levels => (0.0,1.0),
+            MainMenuVariants::About => (1.0,1.0)
         }
     }
 }
@@ -36,6 +38,7 @@ pub enum MainMenuButtonEnum {
     MainMenu,
     StartGame,
     Settings,
+    About,
     Exit,
 }
 

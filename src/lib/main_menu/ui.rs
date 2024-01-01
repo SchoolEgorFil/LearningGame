@@ -18,7 +18,7 @@ use bevy_kira_audio::{Audio, AudioControl};
 use serde_json::Value;
 
 use crate::{
-    lib::tools::{consts::{styles, font_names, self}, transition::TransitionMarker, resources::{MainMenuResource, AllSettings}, events::LoadLevel, config::LevelSchema},
+    lib::tools::{consts::{styles, font_names, self}, transition::TransitionMarker, resources::{MainMenuResource, AllSettings}, events::LoadLevel, config::LevelSchema, self},
     GameState, main,
 };
 
@@ -46,24 +46,32 @@ pub fn button_interactivity(
 ) {
     if state.get() == &GameState::MainMenu { // TODO: why is it here again?
         for (interaction, mut color, button_marker, colors) in &mut main_menu_buttons {
-            match (&button_marker.0, *interaction) {
-                (MainMenuButtonEnum::MainMenu, Interaction::Pressed) => {
+            if *interaction == Interaction::Pressed {
+            match &button_marker.0 {
+                MainMenuButtonEnum::MainMenu => {
                     main_menu_res.transition_proccess.started = true;
                     main_menu_res.next_position = MainMenuVariants::Main;
                     main_menu_res.transition_proccess.timer.reset();
                 }
-                (MainMenuButtonEnum::StartGame, Interaction::Pressed) => {
+                MainMenuButtonEnum::StartGame => {
                     main_menu_res.transition_proccess.started = true;
                     main_menu_res.next_position = MainMenuVariants::Levels;
                     main_menu_res.transition_proccess.timer.reset();
                 }
-                (MainMenuButtonEnum::Settings, Interaction::Pressed) => {
+                MainMenuButtonEnum::Settings => {
                     main_menu_res.transition_proccess.started = true;
                     main_menu_res.next_position = MainMenuVariants::Settings;
                     main_menu_res.transition_proccess.timer.reset();
                 }
-                _ => {}
-            }
+                MainMenuButtonEnum::About => {
+                    main_menu_res.transition_proccess.started = true;
+                    main_menu_res.next_position = MainMenuVariants::About;
+                    main_menu_res.transition_proccess.timer.reset();
+                },
+                MainMenuButtonEnum::Exit => {
+
+                }
+            } }
             match *interaction {
                 Interaction::Pressed => {
                     color.0 = colors.and_then(|x| Some(x.2)).or(Some(styles::button::BUTTON_ACTIVE.into())).unwrap();
@@ -270,7 +278,7 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
     };
 
     let mut text_heading = TextBundle::from_section(
-        "Фізична подорож",
+        "Віртуальна гра 'Подорож з фізикою'",
         TextStyle {
             font_size: 64.,
             color: Color::BLACK,
@@ -318,6 +326,19 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
         button_text_style.clone()
     );
 
+    let goto_about_picker = (
+        ButtonBundle {
+            style: button_style.clone(),
+            ..Default::default()
+        },
+        MainMenuButtonMarker(MainMenuButtonEnum::About)
+    );
+
+    let goto_about_picker_text = TextBundle::from_section(
+        "Посібник користувача",
+        button_text_style.clone()
+    );
+
     let goto_settings_picker = (
         ButtonBundle {
             style: button_style.clone(),
@@ -347,7 +368,36 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
         ..Default::default()
     };
 
+    let help_node = NodeBundle { 
+        style: Style {
+            width: Val::Percent(100.),
+            height: Val::Percent(100.),
+            padding: UiRect::horizontal(Val::Percent(20.)),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::SpaceEvenly,
+            margin: UiRect::new(Val::Vw(100.),Val::ZERO,Val::Vh(100.),Val::ZERO),
+            position_type: PositionType::Absolute,
+            ..Default::default()
+        },
+        background_color: styles::button::BUTTON_ACTIVE.into(),
+        ..Default::default()
+    };
+
     let goto_back_main = (
+        ButtonBundle {
+            style: Style {
+                padding: UiRect::axes(Val::Px(20.), Val::Px(10.)),
+                ..Default::default()
+            },
+            background_color: BackgroundColor(Color::WHITE),
+            ..Default::default()
+        },
+        MainMenuButtonMarker(MainMenuButtonEnum::MainMenu),
+        ButtonColors(styles::button::SETTINGS_BUTTON_DEFAULT,styles::button::SETTINGS_BUTTON_HOVER,styles::button::SETTINGS_BUTTON_ACTIVE)
+    );
+
+    let goto_back_main_2 = (
         ButtonBundle {
             style: Style {
                 padding: UiRect::axes(Val::Px(20.), Val::Px(10.)),
@@ -374,6 +424,15 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                         .spawn(goto_level_picker)
                         .with_children(|p| {
                             p.spawn(goto_level_picker_text);
+                        });
+
+                    parent
+                        .spawn(main_screen_button_group_delimeter_node.clone());
+
+                    parent
+                        .spawn(goto_about_picker)
+                        .with_children(|p| {
+                            p.spawn(goto_about_picker_text);
                         });
 
                     parent
@@ -468,6 +527,73 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section("+",button_text_style.clone()));
                 });
+            });
+        });
+
+        commands // HELP
+        .spawn(help_node)
+        .insert((RootNode,MainMenuMarker))
+        .with_children(|parent| {
+            parent.spawn(ImageBundle {
+                image: bevy::ui::UiImage {
+                    texture: asset_server.load("internal/splash/main_screen_blur.png"),
+                    ..Default::default()
+                },
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    min_width: Val::Vw(100.),
+                    min_height: Val::Vh(100.),
+                    width: Val::Px(0.01),
+                    height: Val::Px(0.01),
+                    aspect_ratio: Some(1920. / 1080.),
+                    left: Val::Px(0.),
+                    top: Val::Px(0.),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+
+            parent
+                .spawn(goto_back_main_2)
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section("Назад", button_text_style.clone()));
+                });
+
+            let style = TextStyle {
+                font: asset_server.load(font_names::NOTO_SANS_SM_BOLD),
+                font_size: 23.,
+                color: Color::BLACK
+            };
+
+            let hint_style = TextStyle {
+                font: asset_server.load(font_names::NOTO_SANS_BLACK_I),
+                font_size: 23.,
+                color: Color::RED
+            };
+
+            parent
+                .spawn(TextBundle::from_sections(
+                    [
+                        TextSection::new("Вітаємо Вас, шановний гравцю, у чарівному світі фізики! За допомогою цієї \
+                                            віртуальної лабораторії ви зможете провести різноманітні експерименти і \
+                                            перевірити власні знання. \n", style.clone()),
+                        TextSection::new("Щоб усішно керувати простором, пропонуємо вивчити кнопки управління: \n - Кнопка ", style.clone()),
+                        TextSection::new("W/A/S/D", hint_style.clone()),
+                        TextSection::new(" викориутстовується для пересування у просторі \n - ", style.clone()),
+                        TextSection::new("Миша", hint_style.clone()),
+                        TextSection::new(" викориутстовується для повороту камери \n - Кнопка ", style.clone()),
+                        TextSection::new("Space", hint_style.clone()),
+                        TextSection::new(" викориутстовується для стрибка \n - Кнопка  ", style.clone()),
+                        TextSection::new("E", hint_style.clone()),
+                        TextSection::new(" викориутстовується для взаємодії з об'єктами \n - Кнопка ", style.clone()),
+                        TextSection::new("Escape", hint_style.clone()),
+                        TextSection::new(" викориутстовується для виходу на головний екран \n", style.clone()),
+                    ]
+                )).insert(BackgroundColor(tools::consts::styles::button::LESS_TRANSPARENT_WHITE));
+            
+            parent.spawn(ImageBundle {
+                image: UiImage { texture: asset_server.load("internal/textures/keyboard-layout.png"), flip_x: false, flip_y: false },
+                ..Default::default()
             });
         });
 

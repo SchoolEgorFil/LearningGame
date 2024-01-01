@@ -7,7 +7,7 @@ use bevy::{
 
 use crate::lib::{
     // placing_parts::{PlacingForm, PlacingObject},
-    scene_loading::ColliderType,
+    scene_loading::attachements::ColliderType,
 };
 
 #[derive(Event)]

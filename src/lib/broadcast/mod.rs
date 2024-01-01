@@ -13,6 +13,7 @@ pub mod link_opener;
 pub mod open_door;
 pub mod stand_button;
 pub mod one_animation;
+pub mod full_animation;
 pub mod named_animation;
 pub mod delay;
 

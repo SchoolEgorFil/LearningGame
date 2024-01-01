@@ -24,7 +24,7 @@ pub struct PlayerResource {
 
 
 #[derive(Resource)]
-pub struct SceneTempRes {
+pub struct LoadingSceneInfo {
     pub name: String,
     pub handle: Handle<Gltf>, 
     pub is_loaded: bool

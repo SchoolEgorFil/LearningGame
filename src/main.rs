@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+// #![windows_subsystem = "windows"]
 
 
 use bevy::{
@@ -40,7 +40,7 @@ fn main() {
         //
         .add_plugins((
             EditorPlugin::default(),
-            FrameTimeDiagnosticsPlugin,
+            // FrameTimeDiagnosticsPlugin,
             // RapierDebugRenderPlugin::default(),
         ))
         .insert_resource(editor_controls())
