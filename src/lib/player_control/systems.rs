@@ -1,4 +1,5 @@
 use bevy::core::Name;
+use bevy::prelude::{NextState, ResMut, State};
 // use bevy::core_pipeline::Skybox;
 // use bevy::prelude::{AmbientLight, AssetServer, EnvironmentMapLight};
 use bevy::{
@@ -13,7 +14,8 @@ use bevy_rapier3d::prelude::{
     KinematicCharacterController, LockedAxes, QueryFilter, RapierContext, RigidBody, Velocity,
 };
 
-use crate::lib::tools::resources::PlayerResource;
+use crate::PlayerState;
+use crate::lib::tools::resources::{PlayerResource, AllSettings};
 use crate::lib::tools::{collision_groups, events, markers};
 
 use super::components::{
@@ -27,10 +29,11 @@ pub fn add_player(
     mut player_ev_r: EventReader<events::SpawnPlayer>,
     mut camera_ev_w: EventWriter<events::SpawnPlayerCamera>,
 ) {
+    
     if player_ev_r.len() != 1 {
         return;
     }
-    let Some(x) = player_ev_r.iter().next() else {panic!()};
+    let Some(x) = player_ev_r.read().next() else {panic!()};
 
     let id = commands
         .spawn(PlayerBundle {
@@ -94,7 +97,16 @@ pub fn move_player(
     mut controllers: Query<&mut ExternalImpulse, With<KinematicCharacterController>>,
     player_camera_transform_q: Query<&Transform, With<markers::PlayerCameraContainerMarker>>,
     key: Res<Input<KeyCode>>,
+    state: Res<State<PlayerState>>,
+
+    mut windows: Query<&mut bevy::prelude::Window>,
+    // btn: Res<Input<MouseButton>>,
+    // mut next_state: ResMut<NextState<GameState>>,
 ) {
+    if *state != PlayerState::Interactive {
+        return;
+    }
+    
     let Ok(mut c) = controllers.get_single_mut() else {return;};
     // let Ok(p) = player_mesh_transform_q.get_single() else {return;};
     let Ok(cam) = player_camera_transform_q.get_single() else {return;};
@@ -111,6 +123,12 @@ pub fn move_player(
     }
     if key.pressed(KeyCode::S) {
         v += cam.back();
+    }
+    if key.just_pressed(KeyCode::P) {
+        let mut window = windows.single_mut();
+        // window.cursor.grab_mode = CursorGrabMode::None;
+        // next_state.0 = Some(GameState::MainMenu);
+        window.cursor.visible = !window.cursor.visible;
     }
 
     if let Some(x) = v.try_normalize() {
@@ -130,7 +148,9 @@ pub fn tackle_jump(
         Entity,
     )>,
     rapier_context: Res<RapierContext>,
+    state: Res<State<PlayerState>>
 ) {
+    
     // TODO move from player to general
     for mut jumpable_object in jumpable_queue.iter_mut() {
         let Some(buf) = jumpable_object.1.jump_buffer else {
@@ -147,7 +167,7 @@ pub fn tackle_jump(
 
         // TODO un-hardocde buffer
 
-        if delta.as_millis() < 300 && toi < 1.0 {
+        if delta.as_millis() < 300 && toi < 1.0 && *state == PlayerState::Interactive {
             jumpable_object.4.linvel.y = 0.0;
             jumpable_object.0.impulse += Vec3::new(0.0, 3.5, 0.0);
             // println!("done"); // TODO LOSE SPEED
@@ -162,7 +182,12 @@ pub fn tackle_jump(
 pub fn queue_player_jump(
     keys: Res<Input<KeyCode>>,
     mut player_q: Query<&mut JumpableCharacter, With<markers::PlayerParentMarker>>,
+    state: Res<State<PlayerState>>
 ) {
+    if *state != PlayerState::Interactive {
+        return;
+    }
+    
     let Ok(mut p) = player_q.get_single_mut() else {
         return;
     };
@@ -178,13 +203,33 @@ pub fn move_camera(
         &mut Transform,
         With<markers::PlayerCameraContainerMarker>,
     >,
+    player: Res<AllSettings>,
 
     mut mouse_motion_events: EventReader<MouseMotion>,
+    state: Res<State<PlayerState>>
 ) {
-    for ev in mouse_motion_events.iter() {
+    if *state != PlayerState::Interactive {
+        return;
+    }
+    
+    for ev in mouse_motion_events.read() {
         player_camera_transform_q.for_each_mut(|mut p| {
-            p.rotate_y(-ev.delta.x / 300.);
-            p.rotate_local_x(-ev.delta.y / 300.);
+            p.rotate_y(-ev.delta.x / 300. / ((125. - player.fov)/25.));
+            p.rotate_local_x(-ev.delta.y / 300. / ((125. - player.fov)/25.));
         });
     }
+}
+
+
+pub fn unrestrict_player(
+    mut state: ResMut<NextState<PlayerState>>
+) {
+    state.0 = Some(PlayerState::Interactive);
+}
+
+
+pub fn restrict_player(
+    mut state: ResMut<NextState<PlayerState>>
+) {
+    state.0 = Some(PlayerState::Absent);
 }

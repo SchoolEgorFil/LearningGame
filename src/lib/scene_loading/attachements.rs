@@ -138,12 +138,12 @@ pub fn gltf_adjust_light(
     mut commands: Commands,
     mut gltf_node_q: Query<(Entity, &mut PointLight), Without<ExploredLightObjectMarker>>,
 ) {
-    for mut e in gltf_node_q.iter_mut() {
-        e.1.intensity /= 720.;
-        commands.entity(e.0).insert(ExploredLightObjectMarker);
-        // e.1.shadows_enabled = true;
-        // e.1.range = 200.;
-    }
+    // for mut e in gltf_node_q.iter_mut() {
+    //     e.1.intensity /= 720.;
+    //     commands.entity(e.0).insert(ExploredLightObjectMarker);
+    //     // e.1.shadows_enabled = true;
+    //     // e.1.range = 200.;
+    // }
 }
 
 pub fn prepare_rapier(mut r_ctx: ResMut<RapierContext>) {

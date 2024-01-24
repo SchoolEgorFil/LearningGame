@@ -4,4 +4,5 @@ use serde::{Serialize, Deserialize};
 pub struct LevelSchema {
     pub name: String,
     pub version: u32,
+    pub prioritize: u32,
 }

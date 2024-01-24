@@ -1,10 +1,12 @@
 use bevy::core::Name;
 use bevy::core_pipeline::bloom::BloomSettings;
+use bevy::core_pipeline::contrast_adaptive_sharpening::ContrastAdaptiveSharpeningSettings;
 use bevy::core_pipeline::experimental::taa::TemporalAntiAliasBundle;
+use bevy::core_pipeline::prepass::{DepthPrepass, NormalPrepass};
 use bevy::core_pipeline::tonemapping::{DebandDither, Tonemapping};
 use bevy::core_pipeline::Skybox;
 use bevy::pbr::ScreenSpaceAmbientOcclusionBundle;
-use bevy::prelude::AmbientLight;
+use bevy::prelude::{AmbientLight, UiCameraConfig, Res};
 use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
     prelude::{
@@ -24,6 +26,7 @@ use bevy::{
     window::Window,
 };
 
+use crate::lib::tools::resources::AllSettings;
 use crate::lib::tools::{events, markers};
 
 use super::materials::{FirstPassMaterial, SecondPassMaterial, ThirdPassMaterial};
@@ -37,6 +40,7 @@ pub fn setup(
     mut third_pass_material_a: ResMut<Assets<ThirdPassMaterial>>,
     // mut materials_a: ResMut<Assets<StandardMaterial>>,
     mut images_a: ResMut<Assets<Image>>,
+    player: Res<AllSettings>,
 
     mut camera_ev_r: EventReader<events::SpawnPlayerCamera>,
     camera_continer_q: Query<Entity, With<markers::PlayerCameraContainerMarker>>,
@@ -92,6 +96,9 @@ pub fn setup(
                 .spawn((
                     markers::PlayerCamera,
                     markers::PlayerMainCamera,
+                    UiCameraConfig {
+                        show_ui: true
+                    },
                     Camera3dBundle {
                         camera: Camera {
                             target: RenderTarget::Window(bevy::window::WindowRef::Primary),
@@ -100,7 +107,7 @@ pub fn setup(
                         },
                         projection: bevy::prelude::Projection::Perspective(
                             bevy::prelude::PerspectiveProjection {
-                                fov: std::f32::consts::FRAC_PI_2,
+                                fov: std::f32::consts::FRAC_PI_2/90.*player.fov,
 				far: 20.,
                                 ..Default::default()
                             },
@@ -109,7 +116,7 @@ pub fn setup(
                             clear_color: ClearColorConfig::Custom(clear_color),
                             ..Default::default()
                         },
-                        tonemapping: Tonemapping::ReinhardLuminance,
+                        tonemapping: Tonemapping::TonyMcMapface,
                         dither: DebandDither::Enabled,
                         ..Default::default()
                     },
@@ -119,10 +126,16 @@ pub fn setup(
                     //     specular_map: asset_server
                     //         .load("internal/environment_maps/pisa_specular_rbg9e5_zstd.ktx2"),
                     // },
-                     BloomSettings {
-                         ..Default::default()
+                     BloomSettings::NATURAL,
+                     (
+                        bevy::pbr::ScreenSpaceAmbientOcclusionSettings { quality_level: bevy::pbr::ScreenSpaceAmbientOcclusionQualityLevel::Medium },
+                        // depth_prepass: DepthPrepass,
+                        NormalPrepass
+                     ),
+                     TemporalAntiAliasBundle::default(),
+                     ContrastAdaptiveSharpeningSettings {
+                        ..Default::default()
                      },
-                     ScreenSpaceAmbientOcclusionBundle::default(),
                     // TemporalAntiAliasBundle::default(), // UiCameraConfig { show_ui: false },
                     // RenderLayers::layer(1),
                 ))
@@ -158,6 +171,10 @@ pub fn setup(
             //     UiCameraConfig { show_ui: false },
             //     // RenderLayers::layer(1),
             // ));
+            // commands.spawn(CameraBun {
+            //         ..Default::default()
+            //     });
+            // });
         });
     }
     if let Some(spawnP) = ev {
@@ -175,6 +192,7 @@ pub fn setup(
                 EnvironmentMapLight {
                     diffuse_map: lx.clone(),
                     specular_map: lx.clone(), //todo lol
+                    // ..Default::default()
                 },
             ));
         }

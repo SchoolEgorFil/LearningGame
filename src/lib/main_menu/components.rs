@@ -1,8 +1,8 @@
 use std::ffi::OsString;
 
-use bevy::prelude::{Component, Resource, Color};
+use bevy::prelude::{Component, Color};
 
-use crate::lib::tools::transition::TransitionMarker;
+
 
 #[derive(Component)]
 pub struct MainMenuMarker;
@@ -15,7 +15,7 @@ pub struct Level(pub OsString);
 pub struct ButtonColors(pub Color,pub Color, pub Color);
 
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MainMenuVariants {
     Main,
     Settings,
@@ -45,7 +45,11 @@ pub enum MainMenuButtonEnum {
 pub enum SettingsButtonEnum {
     VolumeUp(u64),
     VolumeDown(u64),
+    FovChange(i32),
 }
+
+#[derive(Component)]
+pub struct QuickFixImageComponentMarker;
 
 #[derive(Component)]
 pub struct MainMenuButtonMarker(pub MainMenuButtonEnum);
@@ -54,7 +58,13 @@ pub struct MainMenuButtonMarker(pub MainMenuButtonEnum);
 pub struct SettingsButtonMarker(pub SettingsButtonEnum);
 
 #[derive(Component)]
-pub struct SettingsVolumeLabel;
+pub struct SettingsLabel(pub SettingsLabelEnum);
+
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub enum SettingsLabelEnum {
+    Volume,
+    Fov
+}
 
 #[derive(Component)]
 pub struct RootNode;

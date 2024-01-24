@@ -1,12 +1,14 @@
 use bevy::{prelude::{Resource, Entity, Handle}, gltf::Gltf};
+use serde::{Serialize, Deserialize};
 
 use crate::lib::main_menu::components::MainMenuVariants;
 
 use super::transition::TransitionMarker;
 
-#[derive(Resource)]
+#[derive(Resource, Serialize, Deserialize)]
 pub struct AllSettings {
-    pub volume: f64
+    pub volume: f64,
+    pub fov: f32,
 }
 
 #[derive(Resource)]

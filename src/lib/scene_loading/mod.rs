@@ -4,7 +4,9 @@ use self::gltf_handling::{load_gltf_file, spawn_loaded_gltf_scene};
 use self::unload::unload;
 use super::broadcast;
 use crate::GameState;
-use bevy::prelude::{ IntoSystemConfigs, Update, OnExit };
+use bevy::prelude::{ IntoSystemConfigs, Update, OnExit, Commands, TextBundle, OnEnter };
+use bevy::text::TextStyle;
+use bevy::transform::commands;
 use bevy::{
     prelude::{
         in_state, Plugin,
@@ -27,7 +29,7 @@ impl Plugin for SceneLoaderPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             // .add_systems(Startup, prepare_rapier)
-            // .add_systems(OnEnter(GameState::Game), (load_scene).chain())
+            .add_systems(OnEnter(GameState::Game), load_some_scene)
             .add_systems(
                 Update,
                 (
@@ -50,4 +52,9 @@ impl Plugin for SceneLoaderPlugin {
                 unload
             );
     }
+}
+
+
+fn load_some_scene(mut commands: Commands) {
+    // commands.spawn(TextBundle::from_section("asdhjlashjsahjklads", TextStyle { font_size: 36., ..Default::default()}));
 }

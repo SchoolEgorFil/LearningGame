@@ -11,7 +11,7 @@ use bevy::pbr::{CascadeShadowConfigBuilder, NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::{
     
     Children, DirectionalLight, DirectionalLightBundle,
-     Visibility, EntityWorldMut,
+     Visibility, EntityWorldMut, PointLight, SpotLight,
 };
 use bevy::utils::HashMap;
 use bevy::{
@@ -31,13 +31,16 @@ use serde_json::Value;
 
 pub fn gltf_load_extras(
     mut commands: Commands,
-    gltf_node_q: Query<
+    mut gltf_node_q: Query<
         (
             Entity,
             &GltfExtras,
             &Transform,
             Option<&Children>,
             Option<&Name>,
+            Option<&mut DirectionalLight>,
+            Option<&mut PointLight>,
+            Option<&mut SpotLight>
         ),
         Without<ExploredGLTFObjectMarker>,
     >,
@@ -47,7 +50,7 @@ pub fn gltf_load_extras(
     mut mesh_collision_group_ev_w: EventWriter<ModifyCollisionGroup>,
     ass: Res<AssetServer>,
 ) {
-    for node in gltf_node_q.iter() {
+    for mut node in gltf_node_q.iter_mut() {
         commands.entity(node.0).insert(ExploredGLTFObjectMarker);
 
         let object = serde_json::from_str::<Value>(node.1.value.as_str()).unwrap();
@@ -126,28 +129,38 @@ pub fn gltf_load_extras(
                         override_groups: false,
                     });
                 }
-                CustomProps::Sun {
-                    color,
-                    intensity,
+                CustomProps::Light {
+                    // color,
+                    // intensity,
                     shadows,
                 } => {
                     commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
+                    println!("{}", shadows);
+                    if let Some(ref mut a) = node.5 {
+                        a.shadows_enabled = shadows;
+                    }
+                    if let Some(ref mut a) = node.6 {
+                        a.shadows_enabled = shadows;
+                    }
+                    if let Some(ref mut a) = node.7 {
+                        a.shadows_enabled = shadows;
+                    }
 
-                    commands.entity(node.0).insert(DirectionalLightBundle {
-                        directional_light: DirectionalLight {
-                            shadows_enabled: shadows,
-                            illuminance: intensity,
-                            color,
-                            ..Default::default()
-                        },
-                        cascade_shadow_config: CascadeShadowConfigBuilder {
-                            num_cascades: 4,
-                            maximum_distance: 126.,
-                            ..Default::default()
-                        }
-                        .into(),
-                        ..Default::default()
-                    });
+                    // commands.entity(node.0).insert(DirectionalLightBundle {
+                    //     directional_light: DirectionalLight {
+                    //         shadows_enabled: shadows,
+                    //         illuminance: intensity,
+                    //         color,
+                    //         ..Default::default()
+                    //     },
+                    //     cascade_shadow_config: CascadeShadowConfigBuilder {
+                    //         num_cascades: 4,
+                    //         maximum_distance: 126.,
+                    //         ..Default::default()
+                    //     }
+                    //     .into(),
+                    //     ..Default::default()
+                    // });
                 }
                 CustomProps::CollisionAudio(audio) => {
                     commands

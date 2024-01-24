@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{Component, Entity, Name, Plugin, PostUpdate, PreUpdate, World},
+    prelude::{Component, Entity, Name, Plugin, PostUpdate, PreUpdate, World, Update},
     utils::HashMap,
 };
 use serde_json::Value;
@@ -16,6 +16,8 @@ pub mod one_animation;
 pub mod full_animation;
 pub mod named_animation;
 pub mod delay;
+pub mod test_chamber;
+pub mod input_field;
 
 pub struct ManagerPlugin {}
 

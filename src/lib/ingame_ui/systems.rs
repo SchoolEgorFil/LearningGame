@@ -1,9 +1,9 @@
 use bevy::{
-    prelude::{Input, KeyCode, Query, Res, NextState, ResMut},
+    prelude::{Input, KeyCode, Query, Res, NextState, ResMut, State},
     window::{CursorGrabMode, Window},
 };
 
-use crate::GameState;
+use crate::{GameState, PlayerState};
 
 pub fn prepare_cursor(
     // todo move to ui somewhere
@@ -22,7 +22,11 @@ pub fn unlock_cursor(
     // btn: Res<Input<MouseButton>>,
     mut next_state: ResMut<NextState<GameState>>,
     key: Res<Input<KeyCode>>,
+    state: Res<State<PlayerState>>
 ) {
+    if *state != PlayerState::Interactive {
+        return;
+    }
     if key.just_pressed(KeyCode::Escape) {
         let mut window = windows.single_mut();
         window.cursor.grab_mode = CursorGrabMode::None;

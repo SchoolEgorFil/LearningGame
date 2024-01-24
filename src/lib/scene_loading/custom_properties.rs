@@ -89,9 +89,7 @@ pub enum CustomProps {
     PlayerPlacedMirror,
     IsVisible(bool),
     ColliderSensor,
-    Sun {
-        intensity: f32,
-        color: Color,
+    Light {
         shadows: bool,
     },
     MassProp(f32),
@@ -195,37 +193,37 @@ impl CustomProps {
         if name == "collider_sensor" && value.as_bool().unwrap_or(false) {
             return CustomProps::ColliderSensor;
         }
-        if name == "sun_marker" && value.as_bool().unwrap_or(false) {
-            let int = match main.get("sun_intensity").and_then(|p| p.as_f64()) {
-                Some(v) => v as f32,
-                _ => panic!("sun intensity is not set"),
-            };
-            let color = match main
-                .get("sun_color")
-                .and_then(|p| p.as_array())
-                .and_then(|p| {
-                    p.get(0..4).and_then(|x| {
-                        x.iter()
-                            .map(|p| p.as_f64().and_then(|p| Some(p as f32)))
-                            .collect::<Option<Vec<f32>>>()
-                    })
-                }) {
-                Some(v) => v,
-                _ => panic!("sun color is not set"),
-            };
-            let shadows = match main.get("sun_shadows") {
-                Some(v) => v.as_bool().unwrap(),
-                _ => panic!("sun shadows is not set"),
-            };
-            return CustomProps::Sun {
-                intensity: int,
-                color: Color::Rgba {
-                    red: color[0],
-                    green: color[1],
-                    blue: color[2],
-                    alpha: color[3],
-                },
-                shadows: shadows,
+        if name == "shadows" {
+            // let int = match main.get("sun_intensity").and_then(|p| p.as_f64()) {
+            //     Some(v) => v as f32,
+            //     _ => panic!("sun intensity is not set"),
+            // };
+            // let color = match main
+            //     .get("sun_color")
+            //     .and_then(|p| p.as_array())
+            //     .and_then(|p| {
+            //         p.get(0..4).and_then(|x| {
+            //             x.iter()
+            //                 .map(|p| p.as_f64().and_then(|p| Some(p as f32)))
+            //                 .collect::<Option<Vec<f32>>>()
+            //         })
+            //     }) {
+            //     Some(v) => v,
+            //     _ => panic!("sun color is not set"),
+            // };
+            // let shadows = match main.get("sun_shadows") {
+            //     Some(v) => v.as_bool().unwrap(),
+            //     _ => panic!("sun shadows is not set"),
+            // };
+            return CustomProps::Light {
+                // intensity: int,
+                // color: Color::Rgba {
+                //     red: color[0],
+                //     green: color[1],
+                //     blue: color[2],
+                //     alpha: color[3],
+                // },
+                shadows: value.as_bool().unwrap_or(false),
             };
         }
         if name == "audio_on_collision" && value.is_string() {
@@ -300,14 +298,24 @@ impl CustomProps {
                         broadcast::delay::DelayedAction::new(value.clone(), &main);
                     return CustomProps::Action(Box::new(a));
                 }
-		"delay_transmitter" => {
+                "delay_transmitter" => {
                     let  a = 
                         broadcast::delay::DelayedAction::new(value.clone(), &main);
                     return CustomProps::Action(Box::new(a));
                 }
                 "link" => {
                     let a = 
-                        broadcast::link_opener::LinkOpenerAction::new(value.clone(), &main);
+                    broadcast::link_opener::LinkOpenerAction::new(value.clone(), &main);
+                    return CustomProps::Action(Box::new(a));
+                }
+                "input_field" => {
+                    let  a = 
+                        broadcast::input_field::InputFieldAction::new(value.clone(), &main);
+                    return CustomProps::Action(Box::new(a));
+                }
+                "test_chamber" => {
+                    let a = 
+                        broadcast::test_chamber::TestChamberAction::new(value.clone(), &main);
                     return CustomProps::Action(Box::new(a));
                 }
 

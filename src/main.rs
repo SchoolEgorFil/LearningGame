@@ -2,15 +2,16 @@
 
 
 use bevy::{
-    diagnostic::FrameTimeDiagnosticsPlugin,
-    gltf::GltfPlugin,
-    prelude::StandardMaterial,
+    // diagnostic::FrameTimeDiagnosticsPlugin,
+    // gltf::GltfPlugin,
+    // prelude::StandardMaterial,
     prelude::*,
-    render::{settings::WgpuFeatures, RenderPlugin}, pbr::DefaultOpaqueRendererMethod,
+    // render::{settings::WgpuFeatures, RenderPlugin},
+     pbr::DefaultOpaqueRendererMethod,
 };
-use std::time::Duration;
+// use std::time::Duration;
 
-pub mod lib;
+mod lib;
 
 // use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 use bevy_editor_pls::{
@@ -20,7 +21,7 @@ use bevy_editor_pls::{
 use bevy_kira_audio::AudioPlugin;
 use bevy_rapier3d::{
     prelude::{NoUserData, RapierPhysicsPlugin},
-    render::RapierDebugRenderPlugin,
+    // render::RapierDebugRenderPlugin,
 };
 use lib::{tools::{events, resources::AllSettings}, *};
 
@@ -45,11 +46,13 @@ fn main() {
         ))
         .insert_resource(editor_controls())
         .insert_resource(AllSettings { 
-            volume: 1.0
+            volume: 1.0,
+            fov: 90.,
         })
         //
         .add_state::<GameState>()
         .add_state::<UiState>()
+        .add_state::<PlayerState>()
         //
         .add_event::<events::SpawnPlayer>()
         .add_event::<events::SpawnPlayerCamera>()
@@ -60,6 +63,7 @@ fn main() {
         .add_event::<events::ProposePopup>()
         .add_event::<events::ButtonState>()
         .add_event::<events::LoadLevel>()
+        .add_event::<events::CustomEvent>()
         //
         .add_plugins((
             main_menu::MainMenuPlugin,
@@ -78,7 +82,9 @@ fn main() {
 }
 
 
-fn settings(mut a: ResMut<DefaultOpaqueRendererMethod> ) {
+fn settings(
+    mut a: ResMut<DefaultOpaqueRendererMethod> 
+) {
 //    a.set_to_deferred();
 }
 
@@ -89,6 +95,14 @@ pub enum GameState {
     #[default]
     MainMenu,
     Game,
+}
+
+#[derive(States, PartialEq, Eq, Debug, Clone, Hash, Default)]
+pub enum PlayerState {
+    #[default]
+    Absent,
+    Interactive,
+    Restricted
 }
 
 #[derive(States, PartialEq, Eq, Debug, Clone, Hash, Default)]

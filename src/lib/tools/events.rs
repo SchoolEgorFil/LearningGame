@@ -66,3 +66,9 @@ pub struct ButtonState {
 pub struct LoadLevel {
     pub string: OsString
 }
+
+#[derive(Event)]
+pub struct CustomEvent {
+    pub name: String,
+    pub json_encoded: String
+}
