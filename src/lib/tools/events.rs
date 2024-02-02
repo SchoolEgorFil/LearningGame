@@ -7,7 +7,7 @@ use bevy::{
 
 use crate::lib::{
     // placing_parts::{PlacingForm, PlacingObject},
-    scene_loading::ColliderType,
+    scene_loading::attachements::ColliderType,
 };
 
 #[derive(Event)]
@@ -65,4 +65,10 @@ pub struct ButtonState {
 #[derive(Event)]
 pub struct LoadLevel {
     pub string: OsString
+}
+
+#[derive(Event)]
+pub struct CustomEvent {
+    pub name: String,
+    pub json_encoded: String
 }

@@ -12,6 +12,7 @@ pub mod styles {
         // pub const DEFAULT_BORDER: Color = Color::rgb(0.8, 0.2, 0.2);
 
         pub const TRANSPARENT_WHITE: Color = Color::rgba(1.,1.,1.,0.35);
+        pub const LESS_TRANSPARENT_WHITE: Color = Color::rgba(1.,1.,1.,0.6);
     }
 }
 

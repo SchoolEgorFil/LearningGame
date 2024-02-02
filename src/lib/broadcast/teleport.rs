@@ -50,17 +50,17 @@ impl Action for DelayedTeleportAction {
     where
         Self: Sized,
     {
+        let a = value.as_array().unwrap();
         let teleport = {
             let get_values = |a: &Vec<Value>| { Vec3::from((
-                a[0].as_f64().unwrap() as f32,
-                a[1].as_f64().unwrap() as f32,
-                a[2].as_f64().unwrap() as f32
+                a[2].as_str().unwrap().parse::<f32>().unwrap(),
+                a[3].as_str().unwrap().parse::<f32>().unwrap(),
+                a[4].as_str().unwrap().parse::<f32>().unwrap()
             )) };
-            let a = value.as_array().unwrap();
             match a[0].as_str().expect("Action:teleport is an array with first element to be a string") {
                 "absolute" => TeleportDestination::Absolute(get_values(a)),
                 "relative" => TeleportDestination::Relative(get_values(a)),
-                "entity" => TeleportDestination::EntityStr(a[1].as_str().unwrap().to_string()),
+                "entity" => TeleportDestination::EntityStr(a[2].as_str().unwrap().to_string()),
                 _ => panic!("abolute|relative|entity")
             }
         };
@@ -70,7 +70,7 @@ impl Action for DelayedTeleportAction {
             name: "TeleportAction".into(),
             me: Entity::PLACEHOLDER,
             destination: teleport,
-            id: value.as_u64().unwrap(),
+            id: a[1].as_str().unwrap().parse::<u64>().unwrap(),
         }
     }
 

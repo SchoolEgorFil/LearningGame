@@ -28,7 +28,7 @@ pub struct StandButtonAction {
     pub can_be_pressed: bool,
     pub hint: Arc<String>,
     pub stand_entity: Entity,
-    pub button_entity: Entity,
+    // pub button_entity: Entity,
 
     pub press_longetivity: Duration,
     pub retarget_index: u64,
@@ -41,7 +41,6 @@ impl Default for StandButtonAction {
             name: "stand_button".into(),
             hint: Arc::new("Press button".into()),
             can_be_pressed: true,
-            button_entity: Entity::PLACEHOLDER,
             when_pressed: None,
             press_longetivity: Duration::from_secs_f32(2.),
             retarget_index: 0,
@@ -67,17 +66,6 @@ impl Action for StandButtonAction {
     fn try_startup(&mut self, me: Entity, world: &mut World) {
         if !self.startup {
             self.stand_entity = me;
-            world.get::<Children>(me).unwrap().iter().find(|child| {
-                match world.get::<Name>(**child) {
-                    Some(p) if p.starts_with("TheButton") => {
-                        self.button_entity = *child.clone();
-                        return true;
-                    }
-                    _ => {
-                        return false;
-                    }
-                }
-            });
             self.startup = true;
         }
     }

@@ -1,6 +1,6 @@
 use bevy::{prelude::{Handle, AnimationClip, Assets, Entity, warn, Events, AnimationPlayer, Name}, gltf::Gltf};
 
-use crate::lib::tools::{events::ButtonState, resources::SceneTempRes};
+use crate::lib::tools::{events::ButtonState, resources::LoadingSceneInfo};
 
 use super::Action;
 
@@ -21,7 +21,7 @@ impl Action for NamedAnimationAction {
             self.me = me.clone();
             self.is_started = true;
 
-            let a = world.get_resource::<SceneTempRes>().unwrap();
+            let a = world.get_resource::<LoadingSceneInfo>().unwrap();
             if let Some(b) = world.get_resource::<Assets<Gltf>>().unwrap().get(a.handle.clone_weak()) {
                 println!("{}", self.animation_name);
                 if let Some(animation) = b.named_animations.get(&self.animation_name) {

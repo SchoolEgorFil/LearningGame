@@ -1,29 +1,29 @@
-use std::{time::Duration, fs::File, io::BufReader, path::PathBuf};
+use std::{time::Duration, fs::{File, self}, io::BufReader, path::PathBuf, env};
 
 use bevy::{
     prelude::{
         AssetServer, BuildChildren, Button, ButtonBundle, Camera2dBundle, Changed, Color, Commands,
-        Component, DespawnRecursiveExt, Entity, ImageBundle, NextState, NodeBundle, Query, Res,
-        ResMut, State, TextBundle, With, Without, EventWriter,
+        Component, DespawnRecursiveExt, Entity, ImageBundle, NodeBundle, Query, Res,
+        ResMut, State, TextBundle, With, Without, EventWriter, EventReader
     },
     text::{ TextStyle, TextSection, BreakLineOn},
     time::Time,
     ui::{
-        AlignItems, BackgroundColor, FlexDirection, Interaction, JustifyContent, PositionType,
-        Style, UiRect, Val, GridPlacement, AlignSelf, UiImage, GridTrack,
+        AlignItems, BackgroundColor, FlexWrap, FlexDirection, Interaction, JustifyContent, PositionType,
+        Style, UiRect, Val, AlignSelf, UiImage
     },
-    
+    input::mouse::MouseWheel
 };
 use bevy_kira_audio::{Audio, AudioControl};
-use serde_json::Value;
+
 
 use crate::{
-    lib::tools::{consts::{styles, font_names, self}, transition::TransitionMarker, resources::{MainMenuResource, AllSettings}, events::LoadLevel, config::LevelSchema},
-    GameState, main,
+    lib::tools::{consts::{styles, font_names, self}, transition::TransitionMarker, resources::{MainMenuResource, AllSettings}, events::LoadLevel, config::LevelSchema, self},
+    GameState, 
 };
 
 use super::components::{
-    MainMenuButtonEnum, MainMenuButtonMarker, MainMenuMarker, RootNode, MainMenuVariants, Level, SettingsButtonMarker, SettingsButtonEnum, SettingsVolumeLabel, ButtonColors,
+    MainMenuButtonEnum, MainMenuButtonMarker, MainMenuMarker, RootNode, MainMenuVariants, Level, SettingsButtonMarker, SettingsButtonEnum, SettingsLabel, ButtonColors, QuickFixImageComponentMarker
 };
 
 pub fn button_interactivity(
@@ -37,32 +37,64 @@ pub fn button_interactivity(
         (&Interaction, &mut BackgroundColor, &SettingsButtonMarker, Option<&ButtonColors>),
         (Changed<Interaction>, With<Button>, Without<MainMenuButtonMarker>),
     >,
-    mut audio: ResMut<Audio>,
+    audio: ResMut<Audio>,
     mut player: ResMut<AllSettings>,
-    mut text: Query<&mut bevy::text::Text,(With<SettingsVolumeLabel>,Without<MainMenuButtonMarker>,Without<SettingsButtonMarker>)>,
+    mut text: Query<(&mut bevy::text::Text, &SettingsLabel),(Without<MainMenuButtonMarker>,Without<SettingsButtonMarker>)>,
     state: Res<State<GameState>>,
-    mut next_state: ResMut<NextState<GameState>>,
+    // mut next_state: ResMut<NextState<GameState>>,
     time: Res<Time>,
 ) {
     if state.get() == &GameState::MainMenu { // TODO: why is it here again?
         for (interaction, mut color, button_marker, colors) in &mut main_menu_buttons {
-            match (&button_marker.0, *interaction) {
-                (MainMenuButtonEnum::MainMenu, Interaction::Pressed) => {
-                    main_menu_res.transition_proccess.started = true;
-                    main_menu_res.next_position = MainMenuVariants::Main;
-                    main_menu_res.transition_proccess.timer.reset();
-                }
-                (MainMenuButtonEnum::StartGame, Interaction::Pressed) => {
-                    main_menu_res.transition_proccess.started = true;
-                    main_menu_res.next_position = MainMenuVariants::Levels;
-                    main_menu_res.transition_proccess.timer.reset();
-                }
-                (MainMenuButtonEnum::Settings, Interaction::Pressed) => {
-                    main_menu_res.transition_proccess.started = true;
-                    main_menu_res.next_position = MainMenuVariants::Settings;
-                    main_menu_res.transition_proccess.timer.reset();
-                }
-                _ => {}
+            if *interaction == Interaction::Pressed {
+                match &button_marker.0 {
+                    MainMenuButtonEnum::MainMenu => {
+                        if main_menu_res.current_position == MainMenuVariants::Settings {
+                            let path = if let Ok(manifest_dir) = env::var("BEVY_ASSET_ROOT") {
+                                PathBuf::from(manifest_dir)
+                            } else if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
+                                PathBuf::from(manifest_dir)
+                            } else {
+                                env::current_exe()
+                                    .map(|path| {
+                                        path.parent()
+                                            .map(|exe_parent_path| exe_parent_path.to_owned())
+                                            .unwrap()
+                                    })
+                                    .unwrap()
+                            };
+                        
+                            let path = path.join("assets/data");
+                            let path = path.join("settings.json");
+                            let res = fs::write(path, serde_json::to_string(player.as_ref()).expect("couldn't serialize settings into settings.json"));
+                            match res {
+                                Ok(_) => {},
+                                Err(err) => println!("{}",err)
+                            }
+                        }
+                        main_menu_res.transition_proccess.started = true;
+                        main_menu_res.next_position = MainMenuVariants::Main;
+                        main_menu_res.transition_proccess.timer.reset();
+                    }
+                    MainMenuButtonEnum::StartGame => {
+                        main_menu_res.transition_proccess.started = true;
+                        main_menu_res.next_position = MainMenuVariants::Levels;
+                        main_menu_res.transition_proccess.timer.reset();
+                    }
+                    MainMenuButtonEnum::Settings => {
+                        main_menu_res.transition_proccess.started = true;
+                        main_menu_res.next_position = MainMenuVariants::Settings;
+                        main_menu_res.transition_proccess.timer.reset();
+                    }
+                    MainMenuButtonEnum::About => {
+                        main_menu_res.transition_proccess.started = true;
+                        main_menu_res.next_position = MainMenuVariants::About;
+                        main_menu_res.transition_proccess.timer.reset();
+                    },
+                    MainMenuButtonEnum::Exit => {
+
+                    }
+                } 
             }
             match *interaction {
                 Interaction::Pressed => {
@@ -84,7 +116,9 @@ pub fn button_interactivity(
                     player.volume = (player.volume*100.).round()/100.;
                     audio.set_volume(player.volume);
                     for mut t in &mut text {
-                        t.sections[0].value = format!("{:.2}",player.volume);
+                        if t.1.0 == super::components::SettingsLabelEnum::Volume {
+                            t.0.sections[0].value = format!("{:.2}",player.volume);
+                        }
                     }
                 }
                 (SettingsButtonEnum::VolumeUp(v), Interaction::Pressed) => {
@@ -92,10 +126,23 @@ pub fn button_interactivity(
                     player.volume = (player.volume*100.).round()/100.;
                     audio.set_volume(player.volume);
                     for mut t in &mut text {
-                        t.sections[0].value = format!("{:.2}",player.volume);
+                        if t.1.0 == super::components::SettingsLabelEnum::Volume {
+                            t.0.sections[0].value = format!("{:.2}",player.volume);
+                        }
                     }
                 }
-                _ => {}
+                (SettingsButtonEnum::FovChange(v), Interaction::Pressed) => {
+                    player.fov += *v as f32;
+                    player.fov = player.fov.clamp(50.,120.);
+                    for mut t in &mut text {
+                        if t.1.0 == super::components::SettingsLabelEnum::Fov {
+                            t.0.sections[0].value = format!("{:.0}",player.fov);
+                        }
+                    }
+                }
+                (SettingsButtonEnum::VolumeUp(_), _) => {},
+                (SettingsButtonEnum::VolumeDown(_), _) => {},
+                (SettingsButtonEnum::FovChange(_), _) => {},
             }
             match *interaction {
                 Interaction::Pressed => {
@@ -134,14 +181,14 @@ pub fn button_interactivity(
 }
 
 pub fn level_interactivity(
-    mut main_menu_res: ResMut<MainMenuResource>,
-    mut roots: Query<&mut Style, With<RootNode>>,
+    // mut main_menu_res: ResMut<MainMenuResource>,
+    // mut roots: Query<&mut Style, With<RootNode>>,
     mut button_interaction: Query<
         (&Interaction, &mut BackgroundColor, &Level),
         (Changed<Interaction>, With<Button>),
     >,
-    state: Res<State<GameState>>,
-    mut next_state: ResMut<NextState<GameState>>,
+    // state: Res<State<GameState>>,
+    // mut next_state: ResMut<NextState<GameState>>,
     mut ev: EventWriter<LoadLevel>
 ) {
     for (interaction, mut color, button_marker) in &mut button_interaction {
@@ -166,7 +213,7 @@ pub fn level_interactivity(
 #[derive(Component)]
 pub struct MainMenuImageMarker;
 
-pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>, settings: Res<AllSettings>) {
     commands
         .spawn(Camera2dBundle::default())
         .insert(MainMenuMarker);
@@ -180,7 +227,7 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
     let mut level_paths: Vec<(PathBuf,LevelSchema)> = vec![];
 
     {
-        use std::{env, path::{PathBuf}};
+        // use std::{env, path::{PathBuf}};
 
         let path = if let Ok(manifest_dir) = env::var("BEVY_ASSET_ROOT") {
             PathBuf::from(manifest_dir)
@@ -204,18 +251,29 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                 if entry.path().is_dir() && entry.path().read_dir().unwrap().find(|p| p.as_ref().is_ok_and(|p| {p.file_name().eq("main.gltf")})).is_some() {
                     if let Ok(file) = File::open(entry.path().join("config.json")) {
                         let reader = BufReader::new(file);
-                        let u = serde_json::from_reader::<_,LevelSchema>(reader).unwrap();
+                        let mut u = serde_json::from_reader::<_,LevelSchema>(reader).unwrap();
+                        if u.prioritize == 0 {
+                            u.prioritize = u32::MAX;
+                        }
                         level_paths.push((entry.path(),u));
                     } else {
                         level_paths.push((entry.path(),LevelSchema {
                             name: entry.path().to_string_lossy().to_owned().to_string(),
-                            version: 1
+                            version: 1,
+                            prioritize: u32::MAX
                         }));
                     }
                 }
             }
         }
 
+        level_paths.sort_by(|a,b| a.1.prioritize.cmp(&b.1.prioritize));
+
+        for el in level_paths.iter() {
+            println!("{}: {}", el.1.name, el.1.prioritize);
+        }
+
+        // let _ = "a";
 
 
     }
@@ -270,7 +328,7 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
     };
 
     let mut text_heading = TextBundle::from_section(
-        "Фізична подорож",
+        "Віртуальна гра 'Подорож з фізикою'",
         TextStyle {
             font_size: 64.,
             color: Color::BLACK,
@@ -318,6 +376,19 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
         button_text_style.clone()
     );
 
+    let goto_about_picker = (
+        ButtonBundle {
+            style: button_style.clone(),
+            ..Default::default()
+        },
+        MainMenuButtonMarker(MainMenuButtonEnum::About)
+    );
+
+    let goto_about_picker_text = TextBundle::from_section(
+        "Посібник користувача",
+        button_text_style.clone()
+    );
+
     let goto_settings_picker = (
         ButtonBundle {
             style: button_style.clone(),
@@ -347,7 +418,36 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
         ..Default::default()
     };
 
+    let help_node = NodeBundle { 
+        style: Style {
+            width: Val::Percent(100.),
+            height: Val::Percent(100.),
+            padding: UiRect::horizontal(Val::Percent(20.)),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::SpaceEvenly,
+            margin: UiRect::new(Val::Vw(100.),Val::ZERO,Val::Vh(100.),Val::ZERO),
+            position_type: PositionType::Absolute,
+            ..Default::default()
+        },
+        background_color: styles::button::BUTTON_ACTIVE.into(),
+        ..Default::default()
+    };
+
     let goto_back_main = (
+        ButtonBundle {
+            style: Style {
+                padding: UiRect::axes(Val::Px(20.), Val::Px(10.)),
+                ..Default::default()
+            },
+            background_color: BackgroundColor(Color::WHITE),
+            ..Default::default()
+        },
+        MainMenuButtonMarker(MainMenuButtonEnum::MainMenu),
+        ButtonColors(styles::button::SETTINGS_BUTTON_DEFAULT,styles::button::SETTINGS_BUTTON_HOVER,styles::button::SETTINGS_BUTTON_ACTIVE)
+    );
+
+    let goto_back_main_2 = (
         ButtonBundle {
             style: Style {
                 padding: UiRect::axes(Val::Px(20.), Val::Px(10.)),
@@ -374,6 +474,15 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                         .spawn(goto_level_picker)
                         .with_children(|p| {
                             p.spawn(goto_level_picker_text);
+                        });
+
+                    parent
+                        .spawn(main_screen_button_group_delimeter_node.clone());
+
+                    parent
+                        .spawn(goto_about_picker)
+                        .with_children(|p| {
+                            p.spawn(goto_about_picker_text);
                         });
 
                     parent
@@ -424,12 +533,13 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                 border_color: bevy::ui::BorderColor(Color::BLACK),
                 ..Default::default()
             }).with_children(|parent| {
-                let mut text = TextBundle::from_section("Гучність: ", button_text_style.clone());
-                text.style.padding = UiRect::all(Val::Px(10.));
-                let mut text2 = TextBundle::from_section("1.00", button_text_style.clone());
-                text2.style.padding = UiRect::all(Val::Px(10.));
+                let mut volume_label = TextBundle::from_section("Гучність: ", button_text_style.clone());
+                volume_label.style.padding = UiRect::all(Val::Px(10.));
+                let mut volume_value_label = TextBundle::from_section(format!("{}",settings.volume), button_text_style.clone());
+                volume_value_label.style.padding = UiRect::all(Val::Px(10.));
+
                 parent
-                    .spawn(text)
+                    .spawn(volume_label)
                     .insert(BackgroundColor(Color::WHITE));
                 parent.spawn(bevy::ui::node_bundles::ButtonBundle {
                     style: Style {
@@ -448,9 +558,9 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                     parent.spawn(TextBundle::from_section("-",button_text_style.clone()));
                 });
                 parent
-                    .spawn(text2)
+                    .spawn(volume_value_label)
                     .insert(BackgroundColor(Color::WHITE))
-                    .insert(SettingsVolumeLabel);
+                    .insert(SettingsLabel(super::components::SettingsLabelEnum::Volume));
 
                 parent.spawn(bevy::ui::node_bundles::ButtonBundle {
                     style: Style {
@@ -468,6 +578,128 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section("+",button_text_style.clone()));
                 });
+            });
+
+            parent.spawn(NodeBundle {
+                style: Style {
+                    border: UiRect::all(Val::Px(4.)),
+                    ..Default::default()
+                },
+                border_color: bevy::ui::BorderColor(Color::BLACK),
+                ..Default::default()
+            }).with_children(|parent| {
+                let mut fov_label = TextBundle::from_section("Кут огляду:", button_text_style.clone());
+                fov_label.style.padding = UiRect::all(Val::Px(10.));
+                let mut fov_value_label = TextBundle::from_section(format!("{}",settings.fov), button_text_style.clone());
+                fov_value_label.style.padding = UiRect::all(Val::Px(10.));
+
+                parent
+                    .spawn(fov_label)
+                    .insert(BackgroundColor(Color::WHITE));
+                parent.spawn(bevy::ui::node_bundles::ButtonBundle {
+                    style: Style {
+                        width: Val::Px(40.),
+                        height: Val::Px(40.),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        padding: UiRect::all(Val::Px(10.)),
+                        ..Default::default()
+                    },
+                    background_color: BackgroundColor(Color::WHITE),
+                    ..Default::default()
+                })
+                .insert(SettingsButtonMarker(super::components::SettingsButtonEnum::FovChange(-2)))
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section("-",button_text_style.clone()));
+                });
+                parent
+                    .spawn(fov_value_label)
+                    .insert(BackgroundColor(Color::WHITE))
+                    .insert(SettingsLabel(super::components::SettingsLabelEnum::Fov));
+
+                parent.spawn(bevy::ui::node_bundles::ButtonBundle {
+                    style: Style {
+                        width: Val::Px(40.),
+                        height: Val::Px(40.),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        padding: UiRect::all(Val::Px(10.)),
+                        ..Default::default()
+                    },
+                    background_color: BackgroundColor(Color::WHITE),
+                    ..Default::default()
+                })
+                .insert(SettingsButtonMarker(super::components::SettingsButtonEnum::FovChange(2)))
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section("+",button_text_style.clone()));
+                });
+            });
+        });
+
+        commands // HELP
+        .spawn(help_node)
+        .insert((RootNode,MainMenuMarker))
+        .with_children(|parent| {
+            parent.spawn(ImageBundle {
+                image: bevy::ui::UiImage {
+                    texture: asset_server.load("internal/splash/main_screen_blur.png"),
+                    ..Default::default()
+                },
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    min_width: Val::Vw(100.),
+                    min_height: Val::Vh(100.),
+                    width: Val::Px(0.01),
+                    height: Val::Px(0.01),
+                    aspect_ratio: Some(1920. / 1080.),
+                    left: Val::Px(0.),
+                    top: Val::Px(0.),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+
+            parent
+                .spawn(goto_back_main_2)
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section("Назад", button_text_style.clone()));
+                });
+
+            let style = TextStyle {
+                font: asset_server.load(font_names::NOTO_SANS_SM_BOLD),
+                font_size: 23.,
+                color: Color::BLACK
+            };
+
+            let hint_style = TextStyle {
+                font: asset_server.load(font_names::NOTO_SANS_BLACK_I),
+                font_size: 23.,
+                color: Color::RED
+            };
+
+            parent
+                .spawn(TextBundle::from_sections(
+                    [
+                        TextSection::new("Вітаємо Вас, шановний гравцю, у чарівному світі фізики! За допомогою цієї \
+                                            віртуальної лабораторії ви зможете провести різноманітні експерименти і \
+                                            перевірити власні знання. \n", style.clone()),
+                        TextSection::new("Щоб усішно керувати простором, пропонуємо вивчити кнопки управління: \n - Кнопка ", style.clone()),
+                        TextSection::new("W/A/S/D", hint_style.clone()),
+                        TextSection::new(" викориутстовується для пересування у просторі \n - ", style.clone()),
+                        TextSection::new("Миша", hint_style.clone()),
+                        TextSection::new(" викориутстовується для повороту камери \n - Кнопка ", style.clone()),
+                        TextSection::new("Space", hint_style.clone()),
+                        TextSection::new(" викориутстовується для стрибка \n - Кнопка  ", style.clone()),
+                        TextSection::new("E", hint_style.clone()),
+                        TextSection::new(" викориутстовується для взаємодії з об'єктами \n - Кнопка ", style.clone()),
+                        TextSection::new("Escape", hint_style.clone()),
+                        TextSection::new(" викориутстовується для виходу на головний екран \n", style.clone()),
+                    ]
+                )).insert(BackgroundColor(tools::consts::styles::button::LESS_TRANSPARENT_WHITE));
+            
+            parent.spawn(ImageBundle {
+                image: UiImage { texture: asset_server.load("internal/textures/keyboard-layout.png"), flip_x: false, flip_y: false },
+                ..Default::default()
             });
         });
 
@@ -511,7 +743,7 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
             let mut text_heading = TextBundle::from_section(
                 "Список лекцій",
                 TextStyle {
-                    font_size: 48.,
+                    font_size: 58.,
                     color: Color::BLACK,
                     font: asset_server.load(font_names::NOTO_SANS_BOLD),
                 },
@@ -520,21 +752,23 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
             text_heading.style.align_self = AlignSelf::Center;
             parent.spawn(text_heading);
 
-            parent.spawn(NodeBundle {
+            parent.spawn((NodeBundle {
                 style: Style {
                     width: Val::Percent(100.),
-                    display: bevy::ui::Display::Grid,
-                    grid_auto_flow: bevy::ui::GridAutoFlow::Column,
-                    grid_template_columns: vec![GridTrack::flex(1.0),GridTrack::flex(1.0),GridTrack::flex(1.0),GridTrack::flex(1.0)],
+                    display: bevy::ui::Display::Flex,
+                    flex_wrap: FlexWrap::Wrap,
+                    // grid_auto_flow: bevy::ui::GridAutoFlow::Row,
+                    // grid_template_columns: vec![GridTrack::flex(1.0),GridTrack::flex(1.0),GridTrack::flex(1.0),GridTrack::flex(1.0)],
+                    // grid_template_rows: vec![GridTrack::flex(1.0),GridTrack::flex(1.0),GridTrack::flex(1.0)],
                     // row_gap: Val::Px(20.),
                     // column_gap: Val::Px(20.),
                     ..Default::default()
                 },
                 background_color: BackgroundColor(consts::styles::button::TRANSPARENT_WHITE),
                 ..Default::default()
-            }).with_children(|parent| {
+            }, QuickFixImageComponentMarker)).with_children(|parent| {
                 let text_style = TextStyle {
-                    font_size: 22.,
+                    font_size: 32.,
                     color: Color::BLACK,
                     font: asset_server.load(font_names::NOTO_SANS_SM_BOLD),
                 };
@@ -543,8 +777,10 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                     
                     parent.spawn(ButtonBundle {
                         style: Style {
-                            // width: Val::Percent(100.),
-                            min_height: Val::Px(150.),
+                            width: Val::Percent(25.),
+                            flex_grow: 0.,
+                            flex_shrink: 0.,
+                            // min_height: Val::Px(150.),
                             flex_direction: FlexDirection::Column,
                             ..Default::default()
                         },
@@ -552,9 +788,15 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
                         ..Default::default()
                     }).insert(Level(p.0.components().last().unwrap().as_os_str().to_os_string())).with_children(|el| {
                         el.spawn(ImageBundle {
-                            image: UiImage::new(asset_server.load(p.0.clone().join("preview.png"))),
+                            image: UiImage::new(asset_server.load(
+                                if p.0.clone().join("preview.png").exists() {
+                                    p.0.clone().join("preview.png")
+                                } else {
+                                    "internal/splash/preview.png".into()
+                                })),
                             style: Style {
                                 width: Val::Percent(100.),
+                                height: Val::Auto,
                                 aspect_ratio: Some(1.),
                                 ..Default::default()
                             },
@@ -563,7 +805,13 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>)
 
                         let mut text = TextBundle::from_section(p.1.name, text_style.clone());
                         text.style.justify_content = JustifyContent::Center;
-                        text.style.width = Val::Percent(100.);
+                        text.style.width = Val::Percent(80.);
+                        text.style.margin = UiRect {
+                            left: Val::Percent(10.),
+                            right: Val::Percent(10.),
+                            top: Val::Px(20.),
+                            ..Default::default()
+                        };
                         text.text.alignment = bevy::text::TextAlignment::Center;
                         text.text.linebreak_behavior = BreakLineOn::AnyCharacter;
                         el.spawn(text);
@@ -579,4 +827,34 @@ pub fn destroy_main_menu(mut commands: Commands, query: Query<Entity, With<MainM
         commands.entity(main_menu_entity).despawn_recursive();
     }
     commands.remove_resource::<MainMenuResource>();
+}
+
+
+pub fn fix_images(
+    mut scroll_evr: EventReader<MouseWheel>, 
+    main_menu_res: Res<MainMenuResource>,
+    mut query: Query<&mut Style, With<QuickFixImageComponentMarker>>) {
+    use bevy::input::mouse::MouseScrollUnit;
+
+    if main_menu_res.current_position == MainMenuVariants::Levels { 
+        for ev in scroll_evr.read() {
+            let (_,y) = match ev.unit {
+                MouseScrollUnit::Line => {
+                    (ev.x * 21., ev.y * 21.)
+                }
+                MouseScrollUnit::Pixel => {
+                    (ev.x * 24., ev.y * 24.)
+                }
+            };
+
+            for mut style in &mut query {
+                let mt = match style.margin.top {
+                    Val::Px(v) => v,
+                    _ => 0.
+                };
+
+                style.margin.top = Val::Px((y + mt).min(0.));
+            }
+        }
+    }
 }
