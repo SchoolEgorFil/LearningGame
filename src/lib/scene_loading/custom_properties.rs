@@ -82,6 +82,8 @@ pub enum CustomProps {
     PlayerSpawnPoint {
         ambient: Option<(f32, Color)>,
         skybox: Option<String>,
+        diffuse: Option<String>,
+        specular: Option<String>,
     },
     MeshCollider(ColliderType),
     MeshRigidBody(RigidBody),
@@ -148,6 +150,14 @@ impl CustomProps {
                 ambient: amb,
                 skybox: main
                     .get("skybox")
+                    .and_then(|p| p.as_str())
+                    .and_then(|p| Some(p.to_string())),
+                diffuse: main
+                    .get("diff_skybox")
+                    .and_then(|p| p.as_str())
+                    .and_then(|p| Some(p.to_string())),
+                specular: main
+                    .get("spec_skybox")
                     .and_then(|p| p.as_str())
                     .and_then(|p| Some(p.to_string())),
             };

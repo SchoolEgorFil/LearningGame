@@ -59,10 +59,10 @@ pub fn gltf_load_extras(
         for extra in object.iter() {
             match CustomProps::convert(extra.0, extra.1, &object) {
                 CustomProps::_Resolved => {}
-                CustomProps::PlayerSpawnPoint { ambient, skybox } => {
+                CustomProps::PlayerSpawnPoint { ambient, skybox, diffuse, specular } => {
                     player_creation_ev_w.send(SpawnPlayer {
                         transform: Transform::from_translation(node.2.clone().translation),
-                        camera_params: (ambient, skybox),
+                        camera_params: (ambient, skybox, diffuse, specular),
                     });
 
                     commands.entity(node.0).despawn();

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script>
+        let I = 1;
+    </script>
+</head>
+<body>
+    <canvas id="c" style="border: solid 1px black;" width="600" height="300">
+    </canvas>
+<br>
+    <label for="Iin">Бажана сила струму у ел. колі: </label><input type="range" name="Iin" id="Iin" min="0" max="10" step="0.1" oninput="I = (Number(this.value))**3; document.getElementById('Iid').innerHTML = (Number(this.value))**3 + 'A'; " value="1">
+    <p id="Iid">1 А</p>
+</body>
+</html>
+
+<script>
+    /** @type {HTMLCanvasElement}  */
+    let canvas = document.getElementById("c");
+    /** @type {CanvasRenderingContext2D}  */
+    let ctx = canvas.getContext("2d");
+    let w = canvas.width, h = canvas.height;
+
+    let hold = false;
+    let ccx = 0, ccy = 0;
+
+    /** 
+     * @type { {charge: Number, pos_x: Number, pos_y: Number, heat_velocity_angle: Number} }
+    */
+    let particles = [
+        // {charge: 1, pos_x: 0.5, pos_y: 0.5, heat_velocity_angle: 0 }
+    ];
+
+    let rodN = 0;
+
+
+    let ref_values = [1000,600];
+
+    let water = {
+        position: [
+            50,130
+        ],
+        size: [
+            500, 120
+        ]
+    };
+
+    let bar1 = {
+        position: [
+            100, 30
+        ],
+        size: [
+            30, 210
+        ]
+    };
+
+    let bar2 = {
+        position: [
+            470, 30
+        ],
+        size: [
+            30, 210
+        ]
+    };
+
+    function drawRect(obs) {
+        ctx.fillRect(obs.position[0],obs.position[1],obs.size[0],obs.size[1]);
+    }
+
+    function draw() {
+        ctx.clearRect(0,0,w,h);
+        // ctx.beginPath()
+        ctx.fillStyle = "#000000";
+        ctx.font = "22px Vernada";
+        // ctx.textAlign = "center";
+        ctx.fillText(`${Math.round(rodN*0.5850*100)/100} грамів Натрію залишилось на катоді ->`, 100, bar2.position[1] - 10,10000000);
+
+        // bars
+
+        ctx.fillStyle = "rgba(120,120,120,1.0)";
+        drawRect(bar1);
+        drawRect(bar2);
+
+        //water
+
+        ctx.fillStyle = "rgba(0,0,120,0.7)";
+        drawRect(water);
+
+        // particles
+
+        for (let i = 0; i < particles.length; i++) {
+            if (particles[i].charge === 1)
+                ctx.fillStyle = "rgba(255, 252, 127, 1.0)";
+            else
+                ctx.fillStyle = "rgba(178, 222, 39,1.0)";
+            ctx.beginPath();
+            ctx.ellipse(particles[i].pos_x,particles[i].pos_y,2,2,0,0,Math.PI*2,false);
+            ctx.fill();
+        }
+    }
+
+    /** 
+     * @argument {Number} num
+     * @argument {Number} pos_y
+     * @argument {Number} pos_x
+     * @argument {Boolean} charge
+    */
+    function generateParticles(num, pos_x, pos_y, charge) {
+        for (let i = 0; i < num; i++) {
+            particles.push({
+                charge: charge*2 - 1,
+                pos_x,
+                pos_y,
+                heat_velocity_angle: Math.random() * 2 * Math.PI
+            });
+        }
+    }
+
+    let n = 0;
+    function destroyParticles() {
+        n++;
+        if (particles.length === 0) { return; }    
+        particles.sort((a,b) => {
+            if (a.charge - b.charge != 0)
+                return a.charge - b.charge;
+            else 
+                return a.pos_x - b.pos_x;
+
+        });
+        let a = 0;
+        let b = particles.length - 1;
+        while(a < particles.length && particles[a].pos_x < bar1.position[0] + bar1.size[0]) {
+            a++;
+        }
+        while(b >= 0 && particles[b].pos_x > bar2.position[0]) {
+            rodN++;
+            b--;
+        }
+        particles = particles.slice(a,b+1);
+    }
+
+
+    // m = k I t
+    // k = M / (F z)
+    //
+    // nu M = M I t / (F z)
+    //
+    // nu = I t / (F z)
+    //
+    // 1 particle of coarse salt is aprox = 0.5850 gramms
+    //
+    // lets say 1 particle on screen is 1 particle of salt dissolved into Na and Cl groups so each of them is  
+    // N = 0.585 / 58.5 = 10^-2 mole 
+    //
+    // (and z = 1)
+    //
+    // nu / t = I / F
+    //
+    // Let's find out concentration cNu:
+    //
+    // assume № of moles of positive ions == № of negative == 1/2 of total
+    // cNu = (positive_ion.len * mole_per_array_element ) / V
+    // cNu = p_ion_nu / (L h^2)
+    // cNu * h^2 * L_1 = nu
+    // L1 = nu/(cNu h^2)
+    // L1 = t * L * I/(p_ion_nu F)
+    // v = L1/t = L I / (p_ion_nu F)
+    //
+    // v = 2 * L I /(#ion * mole_per_# * avogadro * F)
+    //
+    // (Don't forget that width of bath is in cm)
+
+    const Ffaraday = 96485.33212331;
+    const moleConst = 1E-2;
+
+    // let L = _ => {return water.size[0];};
+    //
+
+    function updateParticles() {
+        for(let i = 0; i < particles.length; i++) {
+            let thermal_velocity = Math.random()*2 + 0.8;
+            let a = 0;
+            let advised_x, advised_y;
+            do {
+                particles[i].heat_velocity_angle += (Math.random()**3)*(2*Math.PI)/1;
+                advised_x = particles[i].pos_x + thermal_velocity * Math.cos(particles[i].heat_velocity_angle);
+                advised_y = particles[i].pos_y + thermal_velocity * Math.sin(particles[i].heat_velocity_angle);
+                a++;
+                // if(a>5) {
+                //     console.log("Try #"+a);
+                // }
+            }        
+            while ((advised_y < water.position[1] || advised_y > water.position[1] + water.size[1]) && a < 20);
+            if (a!=20) {
+                particles[i].pos_x = advised_x;
+                particles[i].pos_y = advised_y;
+            }
+            // particles[i].pos_x += moleConst * particles[i].charge * Ffaraday * water.size[0] / 2 / I / 100;
+            let res = particles[i].charge * 2 * water.size[0] * I / (moleConst * particles.length * Ffaraday * 100);
+            particles[i].pos_x += res;
+        }
+    }
+
+    function mouseAddParticles() {
+        let x = ccx;
+        let y = ccy + window.scrollY;
+
+        if (x > water.position[0] && x < water.position[0] + water.size[0] && y > water.position[1] && y < water.position[1] + water.size[1])
+        if(particles.length < 190)
+            generateParticles(1,x +  Math.random()*8-8/2,y + Math.random()*8-8/2, particles.length%2);
+    }
+    
+
+    function update() {
+        if(hold)
+            mouseAddParticles();
+        destroyParticles();
+        updateParticles();
+        draw();
+        requestAnimationFrame(update);
+    }
+
+    canvas.addEventListener("mousemove", (e) => {
+        ccx = e.clientX;
+        ccy = e.clientY;
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+        hold = true;
+    })
+
+    canvas.addEventListener('mouseup', _ => {
+        hold = false;
+    })
+
+    canvas.addEventListener('mouseleave', _ => {
+        hold = false;
+    })
+
+    update();
+
+</script>

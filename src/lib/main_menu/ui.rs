@@ -667,13 +667,13 @@ pub fn prepare_main_menu(mut commands: Commands, asset_server: Res<AssetServer>,
 
             let style = TextStyle {
                 font: asset_server.load(font_names::NOTO_SANS_SM_BOLD),
-                font_size: 23.,
+                font_size: 32.,
                 color: Color::BLACK
             };
 
             let hint_style = TextStyle {
                 font: asset_server.load(font_names::NOTO_SANS_BLACK_I),
-                font_size: 23.,
+                font_size: 32.,
                 color: Color::RED
             };
 
