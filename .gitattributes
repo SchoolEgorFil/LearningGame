@@ -1,0 +1,9 @@
+docs/* linguist-vendored
+helper_scripts/* linguist-vendored
+blender/* linguist-vendored
+assets/* linguist-vendored
+.vscode/* linguist-vendored
+imported_assets/* linguist-vendored
+vendor/* linguist-vendored
+*.lock linguist-vendored
+launch.jsonc linguist-vendored

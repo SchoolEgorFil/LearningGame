@@ -189,12 +189,21 @@ pub fn setup(
             let lx = asset_server.load(sky);
             commands.entity(id).insert((
                 Skybox(lx.clone()),
-                EnvironmentMapLight {
-                    diffuse_map: lx.clone(),
-                    specular_map: lx.clone(), //todo lol
-                    // ..Default::default()
-                },
             ));
+        }
+        match (&spawnP.camera_params.2, &spawnP.camera_params.3) {
+            (Some(a), Some(b)) => {
+                let ax = asset_server.load(a);
+                let bx = asset_server.load(b);
+                commands.entity(id).insert((
+                    EnvironmentMapLight {
+                        diffuse_map: ax.clone(),
+                        specular_map: bx.clone(), //todo lol
+                        // ..Default::default()
+                    },
+                ));
+            }
+            _ => {}
         }
     }
 

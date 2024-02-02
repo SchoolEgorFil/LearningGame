@@ -13,12 +13,12 @@ use crate::lib::{
 #[derive(Event)]
 pub struct SpawnPlayer {
     pub transform: Transform,
-    pub camera_params: (Option<(f32, Color)>, Option<String>),
+    pub camera_params: (Option<(f32, Color)>, Option<String>, Option<String>,  Option<String>),
 }
 
 #[derive(Event)]
 pub struct SpawnPlayerCamera {
-    pub camera_params: (Option<(f32, Color)>, Option<String>),
+    pub camera_params: (Option<(f32, Color)>, Option<String>, Option<String>,  Option<String>),
 }
 
 // #[derive(Debug, Event)]

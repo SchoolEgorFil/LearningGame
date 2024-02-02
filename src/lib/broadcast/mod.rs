@@ -72,15 +72,3 @@ pub trait Action: Send + Sync {
     fn predicate(&mut self, world: &mut World) -> bool;
     fn execute(&mut self, world: &mut World) -> bool;
 }
-
-// impl action
-
-// pub struct ScriptAction {
-//     pub script_string: String, // todo!() replace with AST
-// }
-
-// impl Action for ScriptAction {
-//     fn predicate(&self, world: &World) -> bool {
-
-//     }
-// }

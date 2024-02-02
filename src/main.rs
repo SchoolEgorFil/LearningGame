@@ -11,6 +11,10 @@ use bevy::{
 };
 // use std::time::Duration;
 
+use bevy::winit::WinitWindows;
+use winit::window::Icon;
+use image::*;
+
 mod lib;
 
 // use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
@@ -30,7 +34,13 @@ fn main() {
     // println!("{:?}", std::env::var_os("CARGO_MANIFEST_DIR"));
 
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Подорож з фізикою".into(),
+                ..default()
+            }),
+            ..default()
+        }))
         .add_plugins(AudioPlugin)
         // .add_plugins(OverlayPlugin {
         //     font_size: 23.0,
@@ -40,11 +50,11 @@ fn main() {
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         //
         .add_plugins((
-            EditorPlugin::default(),
+            // EditorPlugin::default(),
             // FrameTimeDiagnosticsPlugin,
             // RapierDebugRenderPlugin::default(),
         ))
-        .insert_resource(editor_controls())
+        // .insert_resource(editor_controls())
         .insert_resource(AllSettings { 
             volume: 1.0,
             fov: 90.,
@@ -83,9 +93,25 @@ fn main() {
 
 
 fn settings(
-    mut a: ResMut<DefaultOpaqueRendererMethod> 
+    // mut a: ResMut<DefaultOpaqueRendererMethod>,
+    windows: NonSend<WinitWindows>,
 ) {
-//    a.set_to_deferred();
+    // here we use the `image` crate to load our icon data from a png file
+    // this is not a very bevy-native solution, but it will do
+    let (icon_rgba, icon_width, icon_height) = {
+        let image = image::open("assets/internal/splash/thumbnail.png")
+            .expect("Failed to open icon path")
+            .into_rgba8();
+        let (width, height) = image.dimensions();
+        let rgba = image.into_raw();
+        (rgba, width, height)
+    };
+    let icon = Icon::from_rgba(icon_rgba, icon_width, icon_height).unwrap();
+
+    // do it for all windows
+    for window in windows.windows.values() {
+        window.set_window_icon(Some(icon.clone()));
+    }
 }
 
 // mod todo_post_process;
